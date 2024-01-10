@@ -2,7 +2,7 @@
 
 pacman::p_load(tidyverse, rio, ggplot2, lubridate, quanteda, keyATM, readxl, caret)
 
-acled <- import("acled_protest_krml_indicator.csv") 
+acled <- import("data/processed_data/acled_protest_krml_indicator.csv")
 # %>% 
 #   mutate(docid = paste("text", row_number(), sep = ""))
 
@@ -63,7 +63,7 @@ out <- keyATM(
 )
 
 # save(out, file = "acled_keyatm_base_2711.RData")
-load("acled_keyatm_base_2711.RData")
+load("outputs/acled_keyatm_base_2711.RData")
 
 ##### model fit plots (not sure how to interpret them)
 key_viz <- visualize_keywords(docs = keyATM_docs, keywords = keywords_with_war)
@@ -130,7 +130,7 @@ non_zero_observations <- res %>%
 # merge 
 acled_res = acled_with_types %>% left_join(res, by = "event_id_cnty")
 
-write_csv(acled_res, "acled_types_auth_2018_2023.csv")
+write_csv(acled_res, "data/processed_data/acled_types_auth_2018_2023.csv")
 
 
 ##### merge with election dataset ####
