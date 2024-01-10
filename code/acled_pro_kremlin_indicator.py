@@ -3,7 +3,7 @@ import numpy as np
 import re
 
 # read data
-acled = pd.read_csv("acled_ru_2018_2023_mz.csv")
+acled = pd.read_csv("data/raw_data/acled_ru_2018_2023_mz.csv")
 
 ## find unique categories
 # make a list of lists len = len(acled_protest)
@@ -54,4 +54,4 @@ def check_pro_kremlin(value):
 acled['pro_kremlin_indicator'] = acled['assoc_actor_1'].apply(check_pro_kremlin)
 
 # write csv file
-acled.to_csv("acled_protest_krml_indicator.csv", index=False)
+acled.to_csv("data/processed_data/acled_protest_krml_indicator.csv", index=False)
