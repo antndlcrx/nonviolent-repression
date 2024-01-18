@@ -72,7 +72,7 @@ all_media = bind_rows(kprf, kommersant, activatica, kavkaz)
 
 ##### check duplicates ####
 
-length(unique(all_media$content))
+length(unique(all_media_subset$content))
 # Finding duplicate observations in 'variable'
 duplicates <- duplicated(all_media$content)
 
@@ -94,6 +94,36 @@ print(count_table)
 
 ##### isolate protests with keywords ####
 
-corp_media = corpus(all_media, text_field = "content",
-                    docid_field = "link")
+# temp: until parsing is fixed: subset with no duplicates 
+all_media_subset <- all_media %>% 
+  distinct(content, .keep_all = TRUE) %>%
+  mutate(doc_id = paste0("doc_", row_number()))
 
+corp_media = corpus(all_media_subset, text_field = "content",
+                    docid_field = "doc_id")
+
+
+#dictionary
+dict <- quanteda::dictionary(list(
+  protest = c('протест'),
+  rally = c('митинг'),
+  demonstration = c('демонстрация'),
+  revolt = c('бунт'),
+  manifestation = c('манифестация'),
+  boycott = c('бойкот'),
+  strike = c('забастовка'),
+  picketing = c('пикетирование'),
+  picket = c('пикет'),
+  walkout = c('стачка')
+))
+
+
+# tokens with no pre-processing 
+media_toks = tokens(corp_media)
+
+dict_toks = tokens_lookup(media_toks, dictionary = dict)
+
+res = convert(dfm(dict_toks), to = "data.frame") 
+media_res = all_media_subset %>% left_join(res, by = "doc_id")
+
+write_csv(media_res, "data/processed_data/media_protests.csv")
