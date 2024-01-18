@@ -126,4 +126,47 @@ dict_toks = tokens_lookup(media_toks, dictionary = dict)
 res = convert(dfm(dict_toks), to = "data.frame") 
 media_res = all_media_subset %>% left_join(res, by = "doc_id")
 
+# create protest story indicator
+media_res <- media_res %>%
+  mutate(protest_indicator = as.integer(protest > 0 | rally > 0 |
+                                          demonstration > 0 | protest > 0 |
+                                          revolt > 0 | manifestation > 0 |
+                                          boycott > 0 | strike > 0 |
+                                          picketing > 0 | picket > 0 | walkout > 0))
+
 write_csv(media_res, "data/processed_data/media_protests.csv")
+
+##### descriptive stats #####
+
+# Creating a vector of variable names 
+variables_vector <- c("protest", "rally", "demonstration", 
+                      "revolt", "manifestation", "boycott", "strike", 
+                      "picketing", "picket", "walkout")
+
+## Count and ratio of protest stories for each source
+protest_stats_source <- media_res %>%
+  group_by(source) %>%
+  summarise(
+    total_stories = n(),
+    protest_stories = sum(protest_indicator),
+    ratio_protest = protest_stories / total_stories
+  )
+
+protest_stats_source
+
+
+## How many mentions of a keyword in corpus? 
+
+# Calculate the sum of each variable
+sums <- sapply(media_res[variables_vector], sum, na.rm = TRUE)
+
+# Print the sums
+print(sums)
+
+## How many stories mention the keywords
+
+# Count the number of observations > 0 for each variable
+counts_greater_than_zero <- sapply(media_res[variables_vector], function(x) sum(x > 0, na.rm = TRUE))
+
+# Print the counts
+print(counts_greater_than_zero)
