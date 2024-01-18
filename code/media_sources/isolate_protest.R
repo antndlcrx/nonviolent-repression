@@ -1,6 +1,7 @@
-pacman::p_load(tidyverse, rio, ggplot2, lubridate)
+pacman::p_load(tidyverse, rio, ggplot2, lubridate, quanteda)
 
-# setwd(".../nonviolent-repression")
+setwd("C:/Users/murrn/GitHub/nonviolent-repression")
+
 
 # load data
 kprf = read_csv('C:/Users/murrn/GitHub/placeholder_data/kprf_output.csv', 
@@ -66,53 +67,33 @@ kavkaz <- kavkaz %>%
          month_year = format(date, "%Y-%m"),
          source = "Kavkaz")
 
-# Combine all dataframes
-combined_data <- bind_rows(kprf, kommersant, activatica, kavkaz)
-# write_csv(combined_data, "data/combined_media.csv")
+# bind data
+all_media = bind_rows(kprf, kommersant, activatica, kavkaz)
 
+##### check duplicates ####
 
-# Count unique stories for each month and source
-unique_counts <- combined_data %>%
-  group_by(month_year, source) %>%
-  summarise(unique_stories = n_distinct(content)) %>%
-  mutate(month_year = ym(month_year))
+length(unique(all_media$content))
+# Finding duplicate observations in 'variable'
+duplicates <- duplicated(all_media$content)
 
-# Plotting
-monthly_n_plot <- ggplot(unique_counts, aes(x = month_year, y = unique_stories)) +
-  geom_line() +
-  geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Number of Stories by Source",
-       x = "",
-       y = "Number of Stories") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red") +
-  facet_wrap(~source, scales = "free", ncol = 2) # Separate plots for each source
+# Getting the row IDs of these duplicates
+row_ids <- which(duplicates)
 
-# Save the plot with increased height
-ggsave("outputs/monthly_stories_plot.png", monthly_n_plot, width = 10, height = 15, units = "in")
+# Print events
+all_media$content[row_ids]
 
+# duplicates seem to be the result of persisting parsing error
+# create a subset df with duplicates to see n by source
 
+media_duplicates <- all_media[row_ids, ]
 
-##### check for missing dates #### 
+# how many lost observations per source due to parsing error 
+count_table <- table(media_duplicates$source)
 
-# Convert the date column to Date format if it's not already
-combined_data$date <- as.Date(combined_data$date)
+print(count_table)
 
-# Now calculate the start and end dates
-start_date <- min(combined_data$date, na.rm = TRUE)
-end_date <- max(combined_data$date, na.rm = TRUE)
+##### isolate protests with keywords ####
 
-# Create a data frame with all dates in the range
-all_dates <- data.frame(date = seq.Date(from = start_date, to = end_date, by = "day"))
+corp_media = corpus(all_media, text_field = "content",
+                    docid_field = "link")
 
-# Left join with your combined data
-check_dates <- left_join(all_dates, combined_data, by = "date")
-
-# Find dates with no data (where all other columns are NA)
-missing_dates <- check_dates %>%
-  filter(is.na(source)) %>%
-  select(date)
-
-missing_dates
