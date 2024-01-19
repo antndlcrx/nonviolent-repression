@@ -128,7 +128,10 @@ non_zero_count = sum(res$unauthorized != 0 & res$authorized != 0)
 non_zero_observations <- res %>%
   filter(unauthorized != 0 & authorized != 0)
 # merge 
-acled_res = acled_with_types %>% left_join(res, by = "event_id_cnty")
+acled_res = acled_with_types %>% left_join(res, by = "event_id_cnty") %>% 
+  mutate(date = dmy(event_date),
+         year = year(date),
+         month = month(date))
 
 write_csv(acled_res, "data/processed_data/acled_types_auth_2018_2023.csv")
 
