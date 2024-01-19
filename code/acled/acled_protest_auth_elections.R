@@ -246,6 +246,21 @@ write_csv(merged_protest_elections, "merged_protest_elections.csv")
 # check for duplicates
 sum(duplicated(acled_with_types$event_id_cnty))
 
+
+##### merge with manually coded dataset ####
+
+acled_types_auth_2018_2023 <- read_csv("data/processed_data/acled_types_auth_2018_2023.csv")
+acled_preprocessed_jul21_dec22 <- read_excel("data/processed_data/acled_preprocessed_jul21_dec22.xlsx")
+
+manual_cats <- acled_preprocessed_jul21_dec22 %>% 
+  select(event_id_cnty, topic_manual)
+
+merged_data <- left_join(acled_types_auth_2018_2023, manual_cats, by = "event_id_cnty") 
+
+write_csv(merged_data, "data/processed_data/acled_main_with_manual_coding_2018_2023.csv")
+
+
+
 ##### session info ####
 # R version 4.3.1 (2023-06-16 ucrt)
 # Platform: x86_64-w64-mingw32/x64 (64-bit)
