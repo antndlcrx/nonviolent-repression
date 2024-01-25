@@ -1,4 +1,4 @@
-pacman::p_load(tidyverse, rio, ggplot2, lubridate, quanteda)
+pacman::p_load(tidyverse, rio, ggplot2, lubridate, quanteda, newsmap)
 
 setwd("C:/Users/murrn/GitHub/nonviolent-repression")
 
@@ -92,6 +92,62 @@ count_table <- table(media_duplicates$source)
 
 print(count_table)
 
+
+find_content_duplicates <- function(data) {
+  # Check if 'content' column exists
+  if (!"content" %in% colnames(data)) {
+    stop("The dataset does not have a 'content' column.")
+  }
+  
+  # Calculate the number of unique contents
+  num_unique_contents <- length(unique(data$content))
+  cat("Number of unique contents:", num_unique_contents, "\n")
+  
+  # Find duplicate observations in 'content'
+  duplicates <- duplicated(data$content)
+  
+  # Get the row IDs of these duplicates
+  row_ids <- which(duplicates)
+  
+  # Print content of duplicates
+  duplicate_contents <- data$content[row_ids]
+  cat("Contents of duplicate rows:\n")
+  print(duplicate_contents)
+  
+  # Create a subset dataframe with duplicates
+  media_duplicates <- data[row_ids, ]
+  
+  # Return the subset dataframe and row IDs of duplicates
+  list(duplicates_df = media_duplicates, duplicate_row_ids = row_ids)
+}
+
+# Example usage
+result <- find_content_duplicates(kavkaz)
+result$duplicates_df
+result$duplicate_row_ids 
+
+kavkaz_dupl <- kavkaz[result$duplicate_row_ids,]
+
+# Function to find rows where 'tags' column has longer text than 'content' column
+find_longer_tags <- function(data) {
+  # Check if both columns exist
+  if (!("content" %in% colnames(data) && "tags" %in% colnames(data))) {
+    stop("The dataset must contain both 'content' and 'tags' columns.")
+  }
+  
+  # Calculate the length of text in each column
+  content_length <- nchar(as.character(data$content))
+  tags_length <- nchar(as.character(data$tags))
+  
+  # Identify rows where 'tags' is longer than 'content'
+  longer_tags_rows <- which(tags_length > content_length)
+  
+  # Return these rows
+  return(data[longer_tags_rows, ])
+}
+
+res <- find_longer_tags(kavkaz)
+
 ##### isolate protests with keywords ####
 
 # temp: until parsing is fixed: subset with no duplicates 
@@ -119,7 +175,9 @@ dict <- quanteda::dictionary(list(
 
 
 # tokens with no pre-processing 
-media_toks = tokens(corp_media)
+media_toks = tokens(corp_media,  remove_punct = TRUE, remove_number = TRUE) %>% 
+  tokens_remove(pattern = c(stopwords("ru"))) %>% 
+  tokens_wordstem() 
 
 dict_toks = tokens_lookup(media_toks, dictionary = dict)
 
@@ -170,3 +228,31 @@ counts_greater_than_zero <- sapply(media_res[variables_vector], function(x) sum(
 
 # Print the counts
 print(counts_greater_than_zero)
+
+
+#### find Russia-related news ####
+
+toks_label <- tokens_lookup(media_toks, dictionary = data_dictionary_newsmap_ru, 
+                            levels = 3)
+
+
+dfmat_label <- dfm(toks_label, tolower = FALSE)
+
+dfmat_feat <- dfm(media_toks, tolower = FALSE)
+dfmat_feat_select <- dfm_select(dfmat_feat, pattern = "^[A-Z][A-Za-z0-9]+", 
+                                valuetype = "regex", case_insensitive = FALSE) %>% 
+  dfm_trim(min_termfreq = 10)
+
+tmod_nm <- textmodel_newsmap(dfmat_feat_select, y = dfmat_label)
+pred_nm <- predict(tmod_nm)
+coef(tmod_nm, n = 15)[c("RU", "US", "GB")]
+
+### number of articles-per country
+count <- sort(table(factor(pred_nm, levels = colnames(dfmat_label))), decreasing = TRUE)
+head(count, 20)
+
+media_res$newsmap_label <- pred_nm
+
+
+# print individual stories
+media_res$content[media_res$doc_id == "doc_9352"]
