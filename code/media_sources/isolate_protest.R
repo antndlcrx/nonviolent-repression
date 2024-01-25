@@ -72,7 +72,7 @@ all_media = bind_rows(kprf, kommersant, activatica, kavkaz)
 
 ##### check duplicates ####
 
-length(unique(all_media_subset$content))
+length(unique(all_media$content))
 # Finding duplicate observations in 'variable'
 duplicates <- duplicated(all_media$content)
 
@@ -134,7 +134,7 @@ media_res <- media_res %>%
                                           boycott > 0 | strike > 0 |
                                           picketing > 0 | picket > 0 | walkout > 0))
 
-write_csv(media_res, "data/processed_data/media_protests.csv")
+# write_csv(media_res, "data/processed_data/media_protests.csv")
 
 ##### descriptive stats #####
 
