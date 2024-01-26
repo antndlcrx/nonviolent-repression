@@ -243,6 +243,12 @@ dfmat_feat_select <- dfm_select(dfmat_feat, pattern = "^[A-Z][A-Za-z0-9]+",
                                 valuetype = "regex", case_insensitive = FALSE) %>% 
   dfm_trim(min_termfreq = 10)
 
+
+# explore 
+# toks_label[]
+# media_toks[] 
+# media_toks[1][["doc_1"]]
+
 tmod_nm <- textmodel_newsmap(dfmat_feat_select, y = dfmat_label)
 pred_nm <- predict(tmod_nm)
 coef(tmod_nm, n = 15)[c("RU", "US", "GB")]
