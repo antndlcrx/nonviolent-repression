@@ -1,0 +1,82 @@
+---
+title: "Protest Descriptives"
+author: "Maksim Zubok"
+date: "2024-01-25"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+### Count and Ratio of Protest Stories for Each Source
+
+| Source     | Total Stories | Protest Stories | Ratio of Protest |
+|------------|---------------|-----------------|------------------|
+| Activatica | 27,061        | 5,632           | 0.208            |
+| KPRF       | 2,049         | 877             | 0.428            |
+| Kavkaz     | 71,691        | 6,840           | 0.0954           |
+| Kommersant | 351,399       | 5,621           | 0.0160           |
+\newpage
+
+### Number of Mentions of a Keyword in Corpus
+
+| Keyword        | Mentions |
+|----------------|----------|
+| protest        | 6,270    |
+| rally          | 15,859   |
+| demonstration  | 1,008    |
+| revolt         | 740      |
+| manifestation  | 65       |
+| boycott        | 886      |
+| strike         | 798      |
+| picketing      | 290      |
+| picket         | 8,011    |
+| walkout        | 52       |
+
+### Number of Stories Mentioning the Keywords
+
+| Keyword        | Number of Stories |
+|----------------|-------------------|
+| protest        | 5,014             |
+| rally          | 8,637             |
+| demonstration  | 914               |
+| revolt         | 656               |
+| manifestation  | 64                |
+| boycott        | 674               |
+| strike         | 613               |
+| picketing      | 245               |
+| picket         | 4,744             |
+| walkout        | 28                |
+
+
+\newpage
+
+### Number of Articles Per Country
+
+| Country | Number of Articles |
+|---------|--------------------|
+| RU      | 83,681             |
+| US      | 26,423             |
+| UA      | 14,970             |
+| GB      | 8,262              |
+| AM      | 7,442              |
+| DE      | 7,077              |
+| FR      | 7,033              |
+| CN      | 6,168              |
+| AZ      | 5,859              |
+| CY      | 5,053              |
+| PS      | 4,778              |
+| JP      | 4,755              |
+| IT      | 3,754              |
+| IR      | 3,695              |
+| IN      | 3,606              |
+| GE      | 3,591              |
+| SK      | 3,379              |
+| BY      | 2,968              |
+| TR      | 2,565              |
+| SA      | 2,312              |
+

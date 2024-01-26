@@ -1,0 +1,15 @@
+Protest News Counts from Four media sources
+
+We use keywords to find protest related stories among all news articles from four media sources. 
+
+	data description and parsing issues: 
+	- kprf 55 duplicates - most are na's (parsing is fine)
+	- kommersant 9218 duplicates - some na's and other scraping or parsing mistakes
+	- activatica 13 duplicates but weird things happening in main datafile: #экопротест2209: a lot of almost duplicate texts 
+	- kavkaz appears to have a lot parsing issues (potentially due to \" pattern used before every quotation mark in the text). The 	issue causes text content to partially appear in "tags" column. 
+
+1. To establish the keywords, we use word embeddings to find most similar nouns to the word "protest" using gensim library in python
+2. then, in R, we use quanteda library to tokenise the corpus and find documents which mention either of protest keywords found in step 1. 
+	we further do initial descriptive stats in R to see prevalence of keywords in the corpus 
+
+3. We rely on quanteda's newsmap to locate protests happening in Russia

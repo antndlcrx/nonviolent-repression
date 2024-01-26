@@ -121,7 +121,7 @@ find_content_duplicates <- function(data) {
   list(duplicates_df = media_duplicates, duplicate_row_ids = row_ids)
 }
 
-# Example usage
+
 result <- find_content_duplicates(kavkaz)
 result$duplicates_df
 result$duplicate_row_ids 
