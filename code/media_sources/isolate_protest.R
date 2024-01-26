@@ -59,7 +59,8 @@ kommersant <- kommersant %>%
 activatica <- activatica %>%
   mutate(month_year = format(date_created, "%Y-%m"),
          source = "Activatica",
-         content = text)
+         content = text,
+         year = year(date_created))
 
 kavkaz <- kavkaz %>%
   mutate(date = replace_months(date_published, months_map),
@@ -194,6 +195,9 @@ media_res <- media_res %>%
 
 # write_csv(media_res, "data/processed_data/media_protests.csv")
 
+# subst = media_res %>% filter(source == "Activatica") %>%  mutate(year = year(date_created)) %>%
+#   group_by(year, protest_indicator) %>% summarise(n())
+ 
 ##### descriptive stats #####
 
 # Creating a vector of variable names 
@@ -262,3 +266,4 @@ media_res$newsmap_label <- pred_nm
 
 # print individual stories
 media_res$content[media_res$doc_id == "doc_9352"]
+media_res$newsmap_label[media_res$doc_id == "doc_9352"]
