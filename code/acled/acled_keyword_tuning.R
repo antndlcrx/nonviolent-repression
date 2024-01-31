@@ -4,21 +4,36 @@ pacman::p_load(tidyverse, rio, ggplot2, lubridate, quanteda, keyATM, readxl, car
 
 ##### load and preprocess data #####
 acled <- import("data/manually_labelled_data/acled_main_with_manual_coding_2018_2023.csv")
+
 acled_labells <- acled %>% 
   filter(!is.na(topic_manual))
 
-acled_lbls_2020 <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/manually_labelled_data/acled_data_2018_21-2.xlsx") %>% 
+acled_lbls_2020 <- import("data/manually_labelled_data/acled_data_2018_21-2.xlsx") %>% 
   filter(!is.na(type))
 
-acled_lbls_2018_19_23 <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/manually_labelled_data/acled_sample_2018_2023.xlsx") %>% 
+acled_lbls_2018_19_23 <- import("data/manually_labelled_data/acled_sample_2018_2023.xlsx") %>% 
   filter(!is.na(topic_manual))
 
 
 
 ## Inspect intersection between 2021 datasets
 
-common_ids <- intersect(df1$event_id_cnty, df2$event_id_cnty)
+common_ids <- intersect(acled_labells$event_id_cnty, acled_lbls_2020$event_id_cnty)
 
+df1_common <- acled_labells %>% filter(event_id_cnty %in% common_ids) %>% 
+  select(c(event_id_cnty, notes, topic_manual))
+
+df2_common <- acled_lbls_2020 %>% filter(event_id_cnty %in% common_ids) %>% 
+  select(c(type, event_id_cnty)) %>%
+  mutate(type = tolower(type))
+
+intersect_df <- inner_join(df1_common, df2_common, by = "event_id_cnty")
+
+# check inner-coder consistency
+mismatched_labels <- intersect_df %>% 
+  filter(topic_manual != type)
+
+##### Tokenise ACLED ####
 
 corp_acled = corpus(acled, text_field = "notes",
                     docid_field = "event_id_cnty")
