@@ -1,8 +1,9 @@
 pacman::p_load(tidyverse, rio, ggplot2, lubridate, quanteda, keyATM, readxl, caret)
 
+# setwd(".../nonviolent-repression")
 
 ##### load and preprocess data #####
-acled <- import("data/processed_data/acled_main_with_manual_coding_2018_2023.csv")
+acled <- import("data/manually_labelled_data/acled_main_with_manual_coding_2018_2023.csv")
 
 corp_acled = corpus(acled, text_field = "notes",
                     docid_field = "event_id_cnty")
