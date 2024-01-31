@@ -4,6 +4,21 @@ pacman::p_load(tidyverse, rio, ggplot2, lubridate, quanteda, keyATM, readxl, car
 
 ##### load and preprocess data #####
 acled <- import("data/manually_labelled_data/acled_main_with_manual_coding_2018_2023.csv")
+acled_labells <- acled %>% 
+  filter(!is.na(topic_manual))
+
+acled_lbls_2020 <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/manually_labelled_data/acled_data_2018_21-2.xlsx") %>% 
+  filter(!is.na(type))
+
+acled_lbls_2018_19_23 <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/manually_labelled_data/acled_sample_2018_2023.xlsx") %>% 
+  filter(!is.na(topic_manual))
+
+
+
+## Inspect intersection between 2021 datasets
+
+common_ids <- intersect(df1$event_id_cnty, df2$event_id_cnty)
+
 
 corp_acled = corpus(acled, text_field = "notes",
                     docid_field = "event_id_cnty")
