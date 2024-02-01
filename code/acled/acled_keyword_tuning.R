@@ -9,12 +9,44 @@ acled_labells <- acled %>%
   filter(!is.na(topic_manual))
 
 acled_lbls_2020 <- import("data/manually_labelled_data/acled_data_2018_21-2.xlsx") %>% 
-  filter(!is.na(type))
+  filter(!is.na(type)) %>% 
+  select(c(type, year, event_id_cnty)) %>%
+  mutate(topic_manual = tolower(type))
 
 acled_lbls_2018_19_23 <- import("data/manually_labelled_data/acled_sample_2018_2023.xlsx") %>% 
-  filter(!is.na(topic_manual))
+  filter(!is.na(topic_manual)) %>% 
+  select(c(event_id_cnty, topic_manual))
+
+acled_war_gov <- import("data/manually_labelled_data/acled_war_gov_MT.csv")  %>% 
+  rename_with(~ str_to_lower(.) %>%
+                str_replace_all(" ", "_") %>%
+                str_replace_all("-", "_"),
+              .cols = c("War-related", "Pro-regime", "Type", 
+                        "Mention of authorisation", "Authorisation- notes")) %>% 
+  select(c(event_id_cnty, war_related, pro_regime, mention_of_authorisation,
+           authorisation__notes))
 
 
+acled_to_merge <- acled %>% 
+  select(-c(topic, proportion, max, protest_type))
+
+
+# Merge and coalesce files
+merged_df <- acled_to_merge %>%
+  left_join(acled_lbls_2020, by = "event_id_cnty") %>%
+  left_join(acled_lbls_2018_19_23, by = "event_id_cnty") %>%
+  mutate(
+    topic_manual = coalesce(topic_manual, topic_manual.x, topic_manual.y)) %>%
+  # Select original column names (remove the extra columns from joins)
+  select(-contains(".x"), -contains(".y")) %>% 
+  left_join(acled_war_gov, by = "event_id_cnty") %>% 
+  select(-type)
+
+
+# check n of hand-labeled files
+merged_df %>% filter(!is.na(topic_manual)) %>% nrow()
+
+write_csv(merged_df, "data/processed_data/acled_merged_18_23.csv")
 
 ## Inspect intersection between 2021 datasets
 
