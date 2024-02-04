@@ -1,0 +1,151 @@
+---
+title: "KeyATM Report"
+author: "Maksim Zubok"
+date: "2024-02-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, tidyverse, rio, ggplot2, lubridate, quanteda, keyATM, readxl, caret)
+
+```
+
+## Report
+
+
+```{r cars}
+load("outputs/keyatm_env.RData")
+
+```
+
+## Pro-Regime Automated vs Manual
+
+Correspondence between automated and manual labels measured by accuracy is 0.66.
+
+
+```{r echo=FALSE}
+# Convert the summarized data to a Markdown table
+markdown_table <- kable(conf_matrix_regime$overall, format = "markdown", digits = 2)
+
+# Print the Markdown table
+markdown_table
+```
+
+The corresponding confusion matrix: 
+
+```{r echo=FALSE}
+# Convert the summarized data to a Markdown table
+markdown_table <- kable(conf_matrix_regime$table, format = "markdown")
+
+# Print the Markdown table
+markdown_table
+```
+
+
+## Protest KeyATM Automated vs Manual
+
+Correspondence between automated and manual labels as by accuracy is 0.64.
+
+
+```{r echo=FALSE}
+# Convert the summarized data to a Markdown table
+markdown_table <- kable(conf_matrix_protest_type$overall, format = "markdown", digits = 2)
+
+# Print the Markdown table
+markdown_table
+```
+
+
+The aggregate performance averages out great performance on some categories (war, environment, legal), at best average performance on other classes (economic and political) and poor performance on the rest (cultural, social). 
+
+```{r echo=FALSE}
+# Convert the summarized data to a Markdown table
+df = data.frame(conf_matrix_protest_type$byClass) %>% 
+  select(-c("Neg.Pred.Value", "Pos.Pred.Value", 
+            "Prevalence" ,"Detection.Prevalence" ,"Detection.Prevalence"))
+markdown_table <- kable(df, format = "markdown", digits = 2)
+
+# Print the Markdown table
+markdown_table
+```
+
+
+The corresponding Confusion matrix for KeyATM protest types. 
+
+```{r echo=FALSE}
+# Convert the summarized data to a Markdown table
+markdown_table <- kable(conf_matrix_protest_type$table, format = "markdown")
+
+# Print the Markdown table
+markdown_table
+```
+
+
+## Visualisations 
+
+matching Madelene's plots 
+
+```{r echo=FALSE}
+acled_with_preds <- acled_with_preds %>% 
+  mutate(date = dmy(event_date),
+         month_year = format(date, "%Y-%m"))
+```
+
+
+
+```{r echo=FALSE}
+unique_counts_polit <- acled_with_preds %>%
+  mutate(month_year = as.Date(paste0(month_year, "-01"))) %>%
+  group_by(month_year, protest_type) %>%
+  summarise(unique_notes = n_distinct(notes))
+
+
+# Plotting
+political_protests_plot <- ggplot(unique_counts_polit, aes(x = month_year, y = unique_notes, color = protest_type)) +
+  geom_line() +
+  geom_point() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
+  labs(title = "Monthly Number of Unique Protests in Russia",
+       x = "",
+       y = "Number of Unique Protests",
+       linetype = "") +  # Set legend title to no title
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
+
+
+political_protests_plot
+```
+
+```{r echo=FALSE}
+# Calculating the share of each protest type per month
+unique_counts_polit <- acled_with_preds %>%
+  mutate(month_year = as.Date(paste0(month_year, "-01"))) %>%
+  group_by(month_year, protest_type) %>%
+  summarise(unique_notes = n_distinct(notes), .groups = 'drop') %>%
+  # Calculate total protests per month across all types
+  group_by(month_year) %>%
+  mutate(total_notes = sum(unique_notes)) %>%
+  # Calculate the share of protests for each type
+  mutate(share_of_protests = unique_notes / total_notes) %>%
+  # Select only necessary columns
+  select(month_year, protest_type, share_of_protests)
+
+# Plotting the shares
+political_protests_plot <- ggplot(unique_counts_polit, aes(x = month_year, y = share_of_protests, color = protest_type)) +
+  geom_line() +
+  geom_point() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
+  labs(title = "Monthly Share of Protests by Type in Russia",
+       x = "",
+       y = "Share of Total Protests",
+       color = "Protest Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
+
+# Display the plot
+print(political_protests_plot)
+```
+

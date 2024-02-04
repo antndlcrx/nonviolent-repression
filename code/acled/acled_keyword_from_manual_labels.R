@@ -11,7 +11,7 @@ acled_with_type = acled %>% filter(!is.na(topic_manual))
 
 #### Yana's code to get top freq words per category ####
 #create corpus object
-corp_acled = corpus(acled_with_type,
+corp_acled = corpus(acled,
                     docid_field = "event_id_cnty",
                     text_field = "notes")
 # tokenize texts
@@ -21,6 +21,28 @@ toks_acled = tokens(corp_acled, remove_punct = TRUE, remove_number = TRUE) %>%
 
 dfmt_acled = dfm(toks_acled) %>%
   dfm_trim(max_termfreq = 0.80, termfreq_type = "prop") #filter out most common words
+
+# #generate testing data
+# set.seed(123)
+# test_ids = acled_with_type %>%
+#   group_by(topic_manual) %>%
+#   sample_frac(0.3) %>%
+#   pull(event_id_cnty)
+# 
+# 
+# #generate labels (with NAs for testing data)
+# acled_train <- acled %>% filter(!(event_id_cnty %in% test_ids))
+# 
+# corp_train = corpus(acled_train,
+#                     docid_field = "event_id_cnty",
+#                     text_field = "notes")
+# # tokenize texts
+# toks_acled_tr = tokens(corp_train, remove_punct = TRUE, remove_number = TRUE) %>% 
+#   tokens_remove(pattern = c(stopwords("en"), "protest*", "size", "=")) %>% 
+#   tokens_wordstem() # stem the keywords to make it easeir to use later
+# 
+# dfmt_acled_tr = dfm(toks_acled_tr) %>%
+#   dfm_trim(max_termfreq = 0.80, termfreq_type = "prop") #filter out most common words
 
 #get top 75 features for each category
 top_words = topfeatures(dfmt_acled, n = 75, groups = dfmt_acled$topic_manual)
@@ -48,22 +70,6 @@ summary(keyATM_docs)
 
 ##### fit new key atm #### 
 
-# #generate testing data 
-# set.seed(123)
-# test_ids = acled_with_type %>%
-#   group_by(topic_manual) %>% 
-#   sample_frac(0.3) %>%
-#   pull(event_id_cnty)
-# 
-# 
-# #generate labels (with NAs for testing data)
-# acled_with_labels = acled %>% 
-#   left_join(acled_with_type %>% select(event_id_cnty, topic_manual)) %>%
-#   mutate(label = as.factor(ifelse(event_id_cnty %in% test_ids, NA, topic_manual)) 
-#          %>% as.numeric())   
-# labels_use = acled_with_labels$label
-
-
 # Fit keyatm with labels 
 
 out <- keyATM(
@@ -75,7 +81,8 @@ out <- keyATM(
   options           = list(seed = 123)
 )
 
-save(out, file = "outputs/models/acled_keyatm_base_02_04.RData")
+# save(out, file = "outputs/models/acled_keyatm_base_02_04_susbet.RData")
+load("outputs/models/acled_keyatm_base_02_04.RData")
 
 ## diagnostics 
 plot_topicprop(out, show_topic = 1:7)
@@ -101,7 +108,8 @@ acled_with_preds = out$theta %>%
 #### quality labels check ##### 
 
 new_subset <- acled_with_preds %>% 
-  filter(!is.na(topic_manual)) 
+  # filter(event_id_cnty %in% test_ids)
+  filter(!is.na(topic_manual))
 
 new_subset$protest_type <- as.factor(new_subset$protest_type)
 new_subset$topic_manual <- as.factor(new_subset$topic_manual)
@@ -110,5 +118,26 @@ levels(new_subset$protest_type)
 unique(new_subset$protest_type)
 
 # Confusion Matrix
-conf_matrix <- confusionMatrix(new_subset$protest_type, new_subset$topic_manual)
-print(conf_matrix)
+conf_matrix_protest_type <- confusionMatrix(new_subset$protest_type, new_subset$topic_manual)
+print(conf_matrix_protest_type)
+
+
+##### Check on pro-regime ##### 
+
+new_subset <- acled_with_preds %>% 
+  # filter(event_id_cnty %in% test_ids)
+  filter(!is.na(pro_regime))
+
+new_subset$pro_kremlin_indicator <- as.factor(new_subset$pro_kremlin_indicator)
+new_subset$pro_regime <- as.factor(new_subset$pro_regime)
+
+levels(new_subset$pro_kremlin_indicator)
+unique(new_subset$pro_kremlin_indicator)
+
+# Confusion Matrix
+conf_matrix_regime <- confusionMatrix(new_subset$pro_kremlin_indicator, new_subset$pro_regime)
+print(conf_matrix_regime)
+
+# save env for RMD report
+save.image(file = "outputs/keyatm_env.RData")
+
