@@ -43,20 +43,6 @@ keywords <- all_values %>%
   map(~ unlist(.x)) # To ensure each element is a vector of words rather than a list
 
 
-##### Tokenise ##### 
-# which acled to use as corpus?
-corp_acled = corpus(acled, text_field = "notes",
-                    docid_field = "event_id_cnty")
-
-# tokenize texts (copying code from acled_keyatm.R)
-toks_acled = tokens(corp_acled, remove_punct = TRUE, remove_number = TRUE) %>% 
-  tokens_remove(pattern = c(stopwords("en"), "protest*", "size", "=")) %>% 
-  tokens_wordstem() # stem the keywords to make it easier to use later
-
-dfmt_acled = dfm(toks_acled) %>%
-  dfm_trim(max_termfreq = 0.80, termfreq_type = "prop") #filter out most common words
-
-
 keyATM_docs <- keyATM_read(texts = dfmt_acled)
 summary(keyATM_docs)
 
@@ -112,3 +98,17 @@ acled_with_preds = out$theta %>%
                                                         'political', 'social', 
                                                         'economic', 'legal',
                                                         'war (anti)', 'war (pro)')))
+#### quality labels check ##### 
+
+new_subset <- acled_with_preds %>% 
+  filter(!is.na(topic_manual)) 
+
+new_subset$protest_type <- as.factor(new_subset$protest_type)
+new_subset$topic_manual <- as.factor(new_subset$topic_manual)
+
+levels(new_subset$protest_type)
+unique(new_subset$protest_type)
+
+# Confusion Matrix
+conf_matrix <- confusionMatrix(new_subset$protest_type, new_subset$topic_manual)
+print(conf_matrix)
