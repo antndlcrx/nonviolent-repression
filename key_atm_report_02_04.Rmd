@@ -84,7 +84,7 @@ markdown_table
 
 ## Visualisations 
 
-matching Madelene's plots 
+matching Madeleine's plots 
 
 ```{r echo=FALSE}
 acled_with_preds <- acled_with_preds %>% 
