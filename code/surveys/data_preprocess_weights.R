@@ -72,4 +72,100 @@ survey_feb <- survey_feb %>%
 # load population frame minus rows containing information on underaged categories and redundant total categories
 ru_population_frame <- read_csv("data/surveys/ru_population_frame.csv")[-c(1:3,16:18), -c(3,7)]
 
+# harmonise categories
+ru_population_frame <- ru_population_frame %>%
+  mutate(Age = fct_recode(Age,
+                          "35-39" = "35 – 39",
+                          "40-44" = "40 – 44",
+                          "25-29" = "25 – 29",
+                          "45-49" = "45 – 49",
+                          "30-34" = "30 – 34",
+                          "55-59" = "55 – 59",
+                          "50-54" = "50 – 54",
+                          "20-24" = "20 – 24",
+                          "60-64" = "60 – 64",
+                          "18-19" = "18 – 19",
+                          "65-69" = "65 – 69",
+                          "70+" = "70 и более"),
+         Gender = fct_recode(Gender,
+                             "Мужской"= "Men",
+                             "Женский" = "Women")
+  ) %>%
+  pivot_longer(
+    cols = c("BA+", "BA-", "NA"),
+    names_to = "Education",
+    values_to = "Count"
+  )
 
+# harmonise features
+colnames(ru_population_frame) <- c("gender", "age_group", "university_education",
+                                   "count")
+##### Weighting ####
+
+## explore difference in strata proportions between population and sample
+# caluculate proporitons 
+survey_strata <- survey_feb %>% 
+  group_by(gender, age_group, university_education) %>% 
+  summarise(count = n()) %>%
+  mutate(proportion = count / nrow(survey_feb),
+         source = "survey")
+
+pop_strata <- ru_population_frame %>% 
+  mutate(proportion = count/sum(count),
+         source = "population")
+
+pop_age <- ru_population_frame %>% 
+  select(age_group, count) %>% 
+  mutate(proportion = count/sum(count),
+         source = "population")
+
+pop_edu <- ru_population_frame %>% 
+  mutate(proportion = count/sum(count),
+         source = "population")
+
+# combine dfs for plotting
+combined_strata <- rbind(survey_strata, pop_strata)
+
+# plot
+ggplot(combined_strata, aes(x = university_education,
+                            y = proportion,
+                            color = source)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = interaction(age_group, university_education))) +
+  facet_grid(gender ~ age_group) +
+  labs(x = "University Education", y = "Proportion", color = "Gender", shape = "Gender") +
+  theme(legend.position = "bottom") + 
+  theme_bw()
+
+# combine dfs for plotting
+combined_strata <- rbind(survey_strata, pop_strata)
+
+# plot
+ggplot(combined_strata, aes(x = university_education,
+                            y = proportion,
+                            color = source)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = interaction(age_group, university_education))) +
+  facet_grid(gender ~ age_group) +
+  labs(x = "University Education", y = "Proportion", color = "Gender", shape = "Gender") +
+  theme(legend.position = "bottom") + 
+  theme_bw()
+
+# calculate weights and print the df with weights
+weights_strata <- left_join(survey_strata,
+                            pop_strata,
+                            c("gender", "age_group", "university_education")) %>% 
+  rename(population_proportion = proportion.y,
+         sample_proportion = proportion.x)  %>% 
+  # calculate weights as popul prop/sample prop
+  mutate(weight = population_proportion / sample_proportion)
+
+
+
+##### survey library ##### 
+unweighted_data <- svydesign(ids = ~1, data = survey_feb)
+## Warning in svydesign.default(ids = ~1, data = my_sample_1): No weights or
+## probabilities supplied, assuming equal probability
+weighted_data <- rake(design = unweighted_data,
+                      sample.margins = list(~age_group),
+                      population.margins = list(pop_marginal_age))
