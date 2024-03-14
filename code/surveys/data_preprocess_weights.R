@@ -101,7 +101,7 @@ ru_population_frame <- ru_population_frame %>%
 # harmonise features
 colnames(ru_population_frame) <- c("gender", "age_group", "university_education",
                                    "Freq")
-
+# 
 ru_population_frame[1,4] = 1
 ru_population_frame[37,4] = 1
 
@@ -162,15 +162,15 @@ weighted <- postStratify(unweighted_data, ~age_group + gender + university_educa
              ru_population_frame, partial=TRUE)
 
 
-##### misc ####
-# calculate weights and print the df with weights
-weights_strata <- left_join(survey_strata,
-                            pop_strata,
-                            c("gender", "age_group", "university_education")) %>%
-  rename(population_proportion = proportion.y,
-         sample_proportion = proportion.x)  %>%
-  # calculate weights as popul prop/sample prop
-  mutate(weight = population_proportion / sample_proportion)
+summary(weights(weighted))
+# save weights 
+survey_feb$weights <- weights(weighted)
 
 
-test = weighted[["postStrata"]]
+# examine weights
+ggplot(survey_feb, aes(x = weights)) +
+  geom_histogram(fill = "blue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Weights",
+       x = "Weight",
+       y = "Frequency")
