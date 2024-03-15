@@ -2,7 +2,7 @@
 title: "February Survey Report"
 author: "Maksim Zubok"
 date: "2024-03-15"
-output: output: word_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -135,7 +135,7 @@ Note that because in the survey we have a handful of people aged 18-19 who repor
 ## Sample to Population Comparison
 
 
-```{r pressure, echo=FALSE, fig.width=10, fig.height=6}
+```{r, echo=FALSE, fig.width=12, fig.height=7}
 survey_strata <- survey_feb %>% 
   group_by(gender, age_group, university_education) %>% 
   summarise(count = n()) %>%
@@ -172,8 +172,6 @@ The main disparities are:
 ## survey library ##
 unweighted_data <- svydesign(ids = ~1, data = survey_feb)
 
-# rake(unweighted_data, list(~age_group+gender+university_education),
-#      list(ru_population_frame))
 
 weighted <- postStratify(unweighted_data, ~age_group + gender + university_education,
              ru_population_frame, partial=TRUE)
