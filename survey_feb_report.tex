@@ -77,6 +77,16 @@
 \newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
 \newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
 \newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
 \usepackage{graphicx}
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
@@ -154,431 +164,13 @@ Comparison}\label{sample-to-population-comparison}}
 \begin{verbatim}
 ## `summarise()` has grouped output by 'gender', 'age_group'. You can override
 ## using the `.groups` argument.
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <96>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b5>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <bd>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <81>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <ba>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b8>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b9>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <9c>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <83>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <b6>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <81>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <ba>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <be>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <b9>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <96>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b5>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <bd>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <81>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <ba>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b8>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b9>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <9c>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <83>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <b6>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <81>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <ba>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <be>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <b9>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <96>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b5>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <bd>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <81>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <ba>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b8>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Женский' in 'mbcsToSbcs': dot substituted for <b9>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <9c>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <83>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <b6>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d1>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <81>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <ba>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <be>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <d0>
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## conversion failure on 'Мужской' in 'mbcsToSbcs': dot substituted for <b9>
+## `summarise()` has grouped output by 'gender', 'age_group'. You can override
+## using the `.groups` argument.
 \end{verbatim}
 
 \includegraphics{survey_feb_report_files/figure-latex/unnamed-chunk-2-1.pdf}
 
-The main disparities are:
+The main disparities between Survey Feb and Population are:
 
 \begin{itemize}
 \tightlist
@@ -594,36 +186,27 @@ The main disparities are:
 \subsection{Weights witth Survey
 package}\label{weights-witth-survey-package}}
 
+To compute post-stratification weights we rely on the
+\texttt{postStratify} function from the \texttt{survey} package. The
+function adjusts the sampling and replicate weights so that the joint
+distribution of a set of post-stratifying variables matches the known
+population joint distribution. \textbf{However, the package
+documentation does not describe how exactly the adjustment is
+implemented.}
+
 \begin{Shaded}
 \begin{Highlighting}[]
 \DocumentationTok{\#\# survey library \#\#}
 \NormalTok{unweighted\_data }\OtherTok{\textless{}{-}} \FunctionTok{svydesign}\NormalTok{(}\AttributeTok{ids =} \SpecialCharTok{\textasciitilde{}}\DecValTok{1}\NormalTok{, }\AttributeTok{data =}\NormalTok{ survey\_feb)}
-\end{Highlighting}
-\end{Shaded}
 
-\begin{verbatim}
-## Warning in svydesign.default(ids = ~1, data = survey_feb): No weights or
-## probabilities supplied, assuming equal probability
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# rake(unweighted\_data, list(\textasciitilde{}age\_group+gender+university\_education),}
-\CommentTok{\#      list(ru\_population\_frame))}
 
 \NormalTok{weighted }\OtherTok{\textless{}{-}} \FunctionTok{postStratify}\NormalTok{(unweighted\_data, }\SpecialCharTok{\textasciitilde{}}\NormalTok{age\_group }\SpecialCharTok{+}\NormalTok{ gender }\SpecialCharTok{+}\NormalTok{ university\_education,}
 \NormalTok{             ru\_population\_frame, }\AttributeTok{partial=}\ConstantTok{TRUE}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
-\begin{verbatim}
-## Warning in postStratify.survey.design(unweighted_data, ~age_group + gender + :
-## Some strata absent from sample: ignored
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{summary}\NormalTok{(}\FunctionTok{weights}\NormalTok{(weighted))}
+\CommentTok{\# save weights }
+\NormalTok{survey\_feb}\SpecialCharTok{$}\NormalTok{weight }\OtherTok{\textless{}{-}} \FunctionTok{weights}\NormalTok{(weighted)}
+\NormalTok{sum\_feb }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{weights}\NormalTok{(weighted))}
+\NormalTok{sum\_feb}
 \end{Highlighting}
 \end{Shaded}
 
@@ -632,13 +215,161 @@ package}\label{weights-witth-survey-package}}
 ##       0   18588   33196   62445   52625 3604783
 \end{verbatim}
 
-Note: some stratas had no observations in the survey (NA on education
-for some age gender groups). This means we had to ignore them in
-producing weights.
+Note: some strata had no observations in the survey (NA on education for
+some age gender groups). This means we had to ignore them in producing
+weights.
 
 Also the weights for women with no uni education aged 70+ seem to be too
 large. It is not surprising given the disparity, but noteworthy.
 
-\includegraphics{survey_feb_report_files/figure-latex/unnamed-chunk-4-1.pdf}
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# survey library \#\#}
+\NormalTok{unweighted\_data }\OtherTok{\textless{}{-}} \FunctionTok{svydesign}\NormalTok{(}\AttributeTok{ids =} \SpecialCharTok{\textasciitilde{}}\DecValTok{1}\NormalTok{, }\AttributeTok{data =}\NormalTok{ survey\_aug)}
+
+
+\NormalTok{weighted }\OtherTok{\textless{}{-}} \FunctionTok{postStratify}\NormalTok{(unweighted\_data, }\SpecialCharTok{\textasciitilde{}}\NormalTok{age\_group }\SpecialCharTok{+}\NormalTok{ gender }\SpecialCharTok{+}\NormalTok{ university\_education,}
+\NormalTok{             ru\_population\_frame, }\AttributeTok{partial=}\ConstantTok{TRUE}\NormalTok{)}
+
+\CommentTok{\# save weights }
+\NormalTok{survey\_aug}\SpecialCharTok{$}\NormalTok{weight }\OtherTok{\textless{}{-}} \FunctionTok{weights}\NormalTok{(weighted)}
+\NormalTok{sum\_aug }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{weights}\NormalTok{(weighted))}
+\NormalTok{sum\_aug}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   15425   25753   43376   65425   77942 1216293
+\end{verbatim}
+
+For August, we also see that some weights are much larger than others.
+As you can see in the graphs below, the distribution of weights is
+similarly skewed and the disparities between the bulk of the
+distribution and its tales are in the same orders of magnitude. However,
+the largest weight in Feb survey is three times bigger than the largest
+weight in Aug survey.
+
+The largest weights in both surveys relate to different population
+groups.
+
+\begin{longtable}[]{@{}cccc@{}}
+\caption{February Survey, Top Five Rows by Weight}\tabularnewline
+\toprule\noalign{}
+age\_group & gender & university\_education & weight \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+age\_group & gender & university\_education & weight \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+70+ & Женский & BA- & 3604783.0 \\
+70+ & Женский & BA- & 3604783.0 \\
+35-39 & Женский & NA & 1302931.0 \\
+60-64 & Женский & BA- & 811229.8 \\
+60-64 & Женский & BA- & 811229.8 \\
+\end{longtable}
+
+\begin{longtable}[]{@{}cccc@{}}
+\caption{August Survey, Top Five Rows by Weight}\tabularnewline
+\toprule\noalign{}
+age\_group & gender & university\_education & weight \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+age\_group & gender & university\_education & weight \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+30-34 & Женский & NA & 1216293 \\
+40-44 & Мужской & NA & 1052747 \\
+60-64 & Женский & NA & 856270 \\
+70+ & Мужской & BA- & 797236 \\
+70+ & Мужской & BA- & 797236 \\
+\end{longtable}
+
+\includegraphics{survey_feb_report_files/figure-latex/unnamed-chunk-7-1.pdf}
+
+\includegraphics{survey_feb_report_files/figure-latex/unnamed-chunk-8-1.pdf}
+
+\hypertarget{weights-created-manually}{%
+\subsection{Weights created manually}\label{weights-created-manually}}
+
+To check the plausibility of resulting weights, we create alternative
+weights based on the population frequencies of the combination of the
+same strata (Yana's approach). The weights are calculated for each
+category:
+\[ \text{weight}_i = \frac{\text{population frequency}_i}{\text{sample frequency}_i} \]
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# calculate weights and print the df with weights}
+\NormalTok{weights\_aug\_strata }\OtherTok{\textless{}{-}} \FunctionTok{left\_join}\NormalTok{(survey\_aug\_strata,}
+\NormalTok{                            pop\_strata,}
+                            \FunctionTok{c}\NormalTok{(}\StringTok{"gender"}\NormalTok{, }\StringTok{"age\_group"}\NormalTok{, }\StringTok{"university\_education"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{rename}\NormalTok{(}\AttributeTok{population\_proportion =}\NormalTok{ proportion.y,}
+         \AttributeTok{sample\_proportion =}\NormalTok{ proportion.x)  }\SpecialCharTok{\%\textgreater{}\%} 
+  \CommentTok{\# calculate weights as popul prop/sample prop}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{weight =}\NormalTok{ population\_proportion }\SpecialCharTok{/}\NormalTok{ sample\_proportion)}
+
+\NormalTok{sum\_man\_aug }\OtherTok{\textless{}{-}}\FunctionTok{summary}\NormalTok{(weights\_aug\_strata}\SpecialCharTok{$}\NormalTok{weight)}
+\NormalTok{sum\_man\_aug}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##  0.2105  0.5255  1.0878  2.4029  1.9037 16.5951
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# calculate weights and print the df with weights}
+\NormalTok{weights\_feb\_strata }\OtherTok{\textless{}{-}} \FunctionTok{left\_join}\NormalTok{(survey\_feb\_strata,}
+\NormalTok{                            pop\_strata,}
+                            \FunctionTok{c}\NormalTok{(}\StringTok{"gender"}\NormalTok{, }\StringTok{"age\_group"}\NormalTok{, }\StringTok{"university\_education"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{rename}\NormalTok{(}\AttributeTok{population\_proportion =}\NormalTok{ proportion.y,}
+         \AttributeTok{sample\_proportion =}\NormalTok{ proportion.x)  }\SpecialCharTok{\%\textgreater{}\%} 
+  \CommentTok{\# calculate weights as popul prop/sample prop}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{weight =}\NormalTok{ population\_proportion }\SpecialCharTok{/}\NormalTok{ sample\_proportion)}
+
+\CommentTok{\# head(weights\_feb\_strata)}
+\NormalTok{sum\_man\_feb }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(weights\_feb\_strata}\SpecialCharTok{$}\NormalTok{weight)}
+\NormalTok{sum\_man\_feb}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##  0.0000  0.5014  1.1922  3.3786  3.0920 49.1836
+\end{verbatim}
+
+\begin{verbatim}
+## Adding missing grouping variables: `gender`, `age_group`
+## Adding missing grouping variables: `gender`, `age_group`
+\end{verbatim}
+
+\includegraphics{survey_feb_report_files/figure-latex/unnamed-chunk-12-1.pdf}
+
+\includegraphics{survey_feb_report_files/figure-latex/unnamed-chunk-13-1.pdf}
+
+Calculating weights this way gives us the same overall picture. The main
+difference is in the orders of magnitude between the median weight and
+the tail (highest weight).
+
+For \textbf{February} survey, the difference (max weight / median
+weight) with \texttt{postStratify} is \textbf{108.59}, but with simple
+manually created weights it is \textbf{41.26}. For \textbf{August}
+survey, the difference with \texttt{postStratify} is \textbf{28.04}, but
+with simple manually created weights it is \textbf{15.26}.
+
+Note that some observations in February survey have a weight of zero
+because they do not exist in the population census. These are women
+18-19 years old with university education. My suspicion on why we have
+these observations is that some respondents might have misreported their
+education attainment.
 
 \end{document}
