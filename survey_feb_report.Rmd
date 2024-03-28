@@ -100,21 +100,30 @@ wider_age_categories <- list(
   '35-44' = c('35 – 39', '40 – 44'),
   '45-54' = c('45 – 49', '50 – 54'),
   '55-64' = c('55 – 59', '60 – 64'),
-  '65+' = c('65 – 69', '70 – 74', '75 – 79', '80 – 84', '85+')
+  '65+' = c('65 – 69', '70 и более')
 )
 
-# Function to collapse age categories
-collapse_age_categories <- function(df, age_mapping) {
-  df %>%
-    mutate(Age = factor(Age, levels = unlist(age_mapping))) %>%
-    rowwise() %>%
-    mutate(Age = list(names(age_mapping)[sapply(age_mapping, \(x) Age %in% x)])) %>%
-    group_by(Gender, Age) %>%
-    summarize(across(c(`BA+`, `BA-`, `NA`), sum, na.rm = TRUE), .groups = 'drop')
+# Function to map each age range to its new category
+map_age_category <- function(age) {
+  for (category in names(wider_age_categories)) {
+    if (age %in% wider_age_categories[[category]]) {
+      return(category)
+    }
+  }
+  return(NA)
 }
 
-# Apply the function
-collapsed_df <- collapse_age_categories(ru_population_frame, wider_age_categories)
+# Add a new column for the wider age category
+ru_population_frame$WiderAge <- sapply(ru_population_frame$Age, map_age_category)
+
+# Group by Gender and the new WiderAge category, then summarise
+collapsed_df <- ru_population_frame %>%
+  group_by(Gender, WiderAge) %>%
+  summarise(
+    `BA+` = sum(`BA+`, na.rm = TRUE),
+    `BA-` = sum(`BA-`, na.rm = TRUE),
+    `NA` = sum(`NA`, na.rm = TRUE)
+  )
 
 
 # harmonise categories
