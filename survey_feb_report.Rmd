@@ -43,23 +43,17 @@ survey_feb <- survey_feb %>%
     EndDate = as.POSIXct((as.numeric(EndDate) - 25569) * 86400, origin = "1970-01-01", tz = "UTC"),
     RecordedDate = as.POSIXct((as.numeric(RecordedDate) - 25569) * 86400, origin = "1970-01-01", tz = "UTC"),
     # adjust education
+    # Q5 %in% na_education ~ "NA" (incude to count NAs)
     university_education = case_when(Q5 %in% uni_education ~ "BA+",
-                                     Q5 %in% na_education ~ "NA",
                                      TRUE ~ "BA-"),
     #adjust age
     age_group = case_when(
-      as.numeric(Q1) %in% c(18:19) ~ '18-19',
-      as.numeric(Q1) %in% c(20:24) ~ '20-24',
-      as.numeric(Q1) %in% c(25:29) ~ '25-29',
-      as.numeric(Q1) %in% c(30:34) ~ '30-34',
-      as.numeric(Q1) %in% c(35:39) ~ '35-39',
-      as.numeric(Q1) %in% c(40:44) ~ '40-44',
-      as.numeric(Q1) %in% c(45:49) ~ '45-49',
-      as.numeric(Q1) %in% c(50:54) ~ '50-54',
-      as.numeric(Q1) %in% c(55:59) ~ '55-59',
-      as.numeric(Q1) %in% c(60:64) ~ '60-64',
-      as.numeric(Q1) %in% c(65:69) ~ '65-69',
-      as.numeric(Q1) >= 70 ~ '70+',
+      as.numeric(Q1) %in% c(18:24) ~ '18-24',
+      as.numeric(Q1) %in% c(25:34) ~ '25-34',
+      as.numeric(Q1) %in% c(35:44) ~ '35-44',
+      as.numeric(Q1) %in% c(45:54) ~ '45-54',
+      as.numeric(Q1) %in% c(55:64) ~ '55-64',
+      as.numeric(Q1) >= 65 ~ '65+',
       TRUE ~ NA),
     # pull list experiment into one variable 
     list_treatment = case_when(is.na(`Q14 - version 2`) ~ 0, 
@@ -90,44 +84,42 @@ survey_feb <- survey_feb %>%
 survey_aug <- read_csv("data/surveys/survey_aug.csv",
                        locale = locale(encoding = "UTF-8")) %>% 
   # adjust education
+  # education %in% na_education ~ "NA"
   filter(gender != "no_answer") %>% 
     mutate(university_education = case_when(
       education %in% uni_education ~ "BA+",
-      education %in% na_education ~ "NA",
-      TRUE ~ "BA-"),
-      age_group = case_when(
-        as.numeric(age) %in% c(18:19) ~ '18-19',
-        as.numeric(age) %in% c(20:24) ~ '20-24',
-        as.numeric(age) %in% c(25:29) ~ '25-29',
-        as.numeric(age) %in% c(30:34) ~ '30-34',
-        as.numeric(age) %in% c(35:39) ~ '35-39',
-        as.numeric(age) %in% c(40:44) ~ '40-44',
-        as.numeric(age) %in% c(45:49) ~ '45-49',
-        as.numeric(age) %in% c(50:54) ~ '50-54',
-        as.numeric(age) %in% c(55:59) ~ '55-59',
-        as.numeric(age) %in% c(60:64) ~ '60-64',
-        as.numeric(age) %in% c(65:69) ~ '65-69',
-        as.numeric(age) >= 70 ~ '70+',
-        TRUE ~ NA))
-
+      TRUE ~ "BA-")
+    )
+# -c(1:3,16:18) 
 ru_population_frame <- read_csv("data/surveys/ru_population_frame.csv")[-c(1:3,16:18), -c(3,7)]
 
+# Define wider age categories
+wider_age_categories <- list(
+  '18-24' = c('18 – 19', '20 – 24'),
+  '25-34' = c('25 – 29', '30 – 34'),
+  '35-44' = c('35 – 39', '40 – 44'),
+  '45-54' = c('45 – 49', '50 – 54'),
+  '55-64' = c('55 – 59', '60 – 64'),
+  '65+' = c('65 – 69', '70 – 74', '75 – 79', '80 – 84', '85+')
+)
+
+# Function to collapse age categories
+collapse_age_categories <- function(df, age_mapping) {
+  df %>%
+    mutate(Age = factor(Age, levels = unlist(age_mapping))) %>%
+    rowwise() %>%
+    mutate(Age = list(names(age_mapping)[sapply(age_mapping, \(x) Age %in% x)])) %>%
+    group_by(Gender, Age) %>%
+    summarize(across(c(`BA+`, `BA-`, `NA`), sum, na.rm = TRUE), .groups = 'drop')
+}
+
+# Apply the function
+collapsed_df <- collapse_age_categories(ru_population_frame, wider_age_categories)
+
+
 # harmonise categories
-ru_population_frame <- ru_population_frame %>%
-  mutate(Age = fct_recode(Age,
-                          "35-39" = "35 – 39",
-                          "40-44" = "40 – 44",
-                          "25-29" = "25 – 29",
-                          "45-49" = "45 – 49",
-                          "30-34" = "30 – 34",
-                          "55-59" = "55 – 59",
-                          "50-54" = "50 – 54",
-                          "20-24" = "20 – 24",
-                          "60-64" = "60 – 64",
-                          "18-19" = "18 – 19",
-                          "65-69" = "65 – 69",
-                          "70+" = "70 и более"),
-         Gender = fct_recode(Gender,
+ru_population_frame <- collapsed_df %>%
+  mutate(Gender = fct_recode(Gender,
                              "Мужской"= "Men",
                              "Женский" = "Women")
   ) %>%
@@ -140,9 +132,7 @@ ru_population_frame <- ru_population_frame %>%
 # harmonise features
 colnames(ru_population_frame) <- c("gender", "age_group", "university_education",
                                    "Freq")
-# manually change pop values from zero to prevent models from collapsing (CONTROVERSIAL)
-ru_population_frame[1,4] = 1
-ru_population_frame[37,4] = 1
+
 
 ```
 
