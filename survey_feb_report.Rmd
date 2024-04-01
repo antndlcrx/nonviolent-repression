@@ -450,7 +450,7 @@ Calculating weights this way gives us the same overall picture. The main differe
 
 For **February** survey, the difference (max weight / median weight) with `postStratify` is **`r round(sum_feb["Max."] / sum_feb["Median"], 2)`**, but with simple manually created weights it is **`r round(sum_man_feb["Max."] / sum_man_feb["Median"], 2)`**. For **August** survey, the difference with `postStratify` is **`r round(sum_aug["Max."] / sum_aug["Median"], 2)`**, but with simple manually created weights it is **`r round(sum_man_aug["Max."] / sum_man_aug["Median"], 2)`**.
 
-Note that some observations in February survey have a weight of zero because they do not exist in the population census. These are women 18-19 years old with university education. My suspicion on why we have these observations is that some respondents might have misreported their education attainment. 
+ 
 ```{r}
 # survey_feb <- survey_feb %>%
 #   left_join(weights_feb_strata_man, by = c("age_group", "gender", "university_education")) %>%
