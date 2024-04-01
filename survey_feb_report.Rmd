@@ -191,49 +191,35 @@ pop_strata <- ru_population_frame %>%
   mutate(proportion = Freq/sum(Freq),
          source = "Census 2020")
 
-# combine dfs for plotting
-# combined_strata <- rbind(survey_strata, pop_strata)
-combined_strata <- combined_strata <- rbind(survey_feb_strata, survey_aug_strata, pop_strata) %>%
-  mutate(comparison_group = case_when(
-    source == "population" ~ "Population",
-    source == "survey_feb" ~ "Survey Feb",
-    source == "survey_aug" ~ "Survey Aug",
-    TRUE ~ as.character(source)  # Fallback in case there are other sources
-  ))
+combined_strata <- combined_strata <- rbind(survey_feb_strata, survey_aug_strata, pop_strata) 
 
-# Plotting
-# ggplot(combined_strata, aes(x = university_education, y = proportion, color = source)) +
-#   geom_point(aes(shape = source), size = 3) +  # Use shape to differentiate sources
-#   geom_line(aes(group = interaction(university_education, source), linetype = source)) +  # Use linetype to differentiate lines
-#   facet_grid(gender ~ age_group) +  # Facets based on gender and age_group
-#   labs(
-#     x = "University Education", 
-#     y = "Proportion", 
-#     color = "Source",
-#     shape = "Source",  # Legend for shapes
-#     linetype = "Source"  # Legend for linetypes
-#   ) +
-#   theme(legend.position = "bottom") + 
-#   theme_bw()
+census_for_feb <- combined_strata %>% 
+  filter(source == "Census 2020") %>% 
+  mutate(comparison = "Census 2020")
+
+census_for_aug <- combined_strata %>% 
+  filter(source == "Census 2020") %>% 
+  mutate(comparison = "Census  2020")
 
 # plot differences
 ggplot(combined_strata, aes(x = university_education,
                             y = proportion,
-                            color = source)) +
-  geom_point(aes(shape = source), size = 3) +
+                            color = source, shape = source)) +
+  geom_point(size = 3) +
   geom_line(aes(group = interaction(age_group, university_education))) +
   facet_grid(gender ~ age_group) +
-  labs(x = "University Education", y = "Proportion", shape = "Source") +
+  scale_color_manual(values = c("Census 2020" = "red", "February Survey" = "lightblue", "August Survey" = "darkgreen")) +
+  scale_shape_manual(values = c("Census 2020" = 16, "February Survey" = 17, "August Survey" = 18)) +
+  labs(x = "University Education", y = "Proportion", shape = "Source", color = "Source") +
   theme(legend.position = "bottom") +
   theme_bw()
 
-
-
 ```
 
-The main disparities between the February and the 2020 Census are: 
+The **main disparities between the February and the 2020 Census* are: 
 
-- oversampled young women 25-34 and undersampled men 35-44 and men 45-54. We have also oversampled men 55-64 and, to a lesser degree, men 65+ while undersampling women 65+.
+- The biggest disparities are is women 55-64 and 65+ without education. The survey has `r nrow(survey_feb %>% filter(gender == "Woman" & age >= 65 & university_education == "BA+"))`` women in the latter category. 
+- We have oversampled young women, especially 25-34 years old with university education, and undersampled men without university education across all age categories except 55- and 65+. 
 
 
 ## Weights witth Survey package
@@ -250,7 +236,7 @@ weighted <- postStratify(unweighted_data, ~age_group + gender + university_educa
              ru_population_frame, partial=TRUE)
 
 # save weights 
-survey_feb$weight <- weights(weighted)
+survey_feb$weight_poststratify <- weights(weighted)
 
 sum_feb <- round(summary(weights(weighted)), 2)
 
@@ -278,7 +264,7 @@ weighted <- postStratify(unweighted_data, ~age_group + gender + university_educa
              ru_population_frame, partial=TRUE)
 
 # save weights 
-survey_aug$weight <- weights(weighted)
+survey_aug$weight_poststratify <- weights(weighted)
 
 sum_aug <- round(summary(weights(weighted)), 2)
 
@@ -301,9 +287,9 @@ The largest weights in both surveys relate to different population groups.
 
 ```{r echo=FALSE}
 top_five_rows_feb <- survey_feb %>%
-  distinct(weight, .keep_all = TRUE) %>%  
-  arrange(desc(weight)) %>%
-  select(age_group, gender, university_education, weight) %>%
+  distinct(weight_poststratify, .keep_all = TRUE) %>%  
+  arrange(desc(weight_poststratify)) %>%
+  select(age_group, gender, university_education, weight_poststratify) %>%
   slice_head(n = 5)
 
 kable(top_five_rows_feb, caption = "February Survey, Top Five Rows by Unique Weight", align = 'c')
@@ -312,9 +298,9 @@ kable(top_five_rows_feb, caption = "February Survey, Top Five Rows by Unique Wei
 
 ```{r echo=FALSE}
 top_five_rows_aug <- survey_aug  %>%
-  distinct(weight, .keep_all = TRUE) %>% 
-  arrange(desc(weight)) %>% 
-  select(age_group, gender, university_education, weight)%>% 
+  distinct(weight_poststratify, .keep_all = TRUE) %>% 
+  arrange(desc(weight_poststratify)) %>% 
+  select(age_group, gender, university_education, weight_poststratify)%>% 
   head(5)
 
 kable(top_five_rows_aug, caption = "August Survey, Top Five Rows by Weight", align = 'c')
@@ -325,15 +311,15 @@ kable(top_five_rows_aug, caption = "August Survey, Top Five Rows by Weight", ali
 
 survey_feb_selected <- survey_feb %>%
   mutate(Survey = 'February') %>%
-  select(weight, Survey)
+  select(weight_poststratify, Survey)
 
 survey_aug_selected <- survey_aug %>%
   mutate(Survey = 'August') %>%
-  select(weight, Survey)
+  select(weight_poststratify, Survey)
 
 combined_weights <- rbind(survey_feb_selected, survey_aug_selected)
 
-ggplot(combined_weights, aes(x = weight, fill = Survey)) +
+ggplot(combined_weights, aes(x = weight_poststratify, fill = Survey)) +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'August'), bins = 100, alpha = 0.5, color = "black") +
   scale_fill_manual(values = c("February" = "blue", "August" = "red")) +
@@ -346,14 +332,14 @@ ggplot(combined_weights, aes(x = weight, fill = Survey)) +
 ```
 
 ```{r echo=FALSE}
-plot_feb <- ggplot(survey_feb_selected, aes(x = weight)) +
+plot_feb <- ggplot(survey_feb_selected, aes(x = weight_poststratify)) +
   geom_histogram(bins = 100, fill = "blue", color = "black", alpha = 0.5) +
   theme_minimal() +
   labs(title = "February: Distribution of Weights",
        x = "Weight",
        y = "Frequency")
 
-plot_aug <- ggplot(survey_aug_selected, aes(x = weight)) +
+plot_aug <- ggplot(survey_aug_selected, aes(x = weight_poststratify)) +
   geom_histogram(bins = 100, fill = "red", color = "black", alpha = 0.5) +
   theme_minimal() +
   labs(title = "August: Distribution of Weights",
@@ -371,7 +357,7 @@ To check the plausibility of resulting weights, we create alternative weights ba
 
 ```{r }
 # calculate weights and print the df with weights
-weights_aug_strata <- left_join(survey_aug_strata,
+weights_aug_strata_man <- left_join(survey_aug_strata,
                             pop_strata,
                             c("gender", "age_group", "university_education")) %>% 
   rename(population_proportion = proportion.y,
@@ -379,7 +365,7 @@ weights_aug_strata <- left_join(survey_aug_strata,
   # calculate weights as popul prop/sample prop
   mutate(weight = population_proportion / sample_proportion)
 
-sum_man_aug <- round(summary(weights_aug_strata$weight), 2)
+sum_man_aug <- round(summary(weights_aug_strata_man$weight), 2)
 
 sum_man_aug_mat <-  matrix(as.numeric(sum_man_aug), nrow = 1, 
                           dimnames = list(c("Value"),
@@ -396,7 +382,7 @@ kable(sum_man_aug_mat,
 
 ```{r }
 # calculate weights and print the df with weights
-weights_feb_strata <- left_join(survey_feb_strata,
+weights_feb_strata_man <- left_join(survey_feb_strata,
                             pop_strata,
                             c("gender", "age_group", "university_education")) %>% 
   rename(population_proportion = proportion.y,
@@ -404,8 +390,7 @@ weights_feb_strata <- left_join(survey_feb_strata,
   # calculate weights as popul prop/sample prop
   mutate(weight = population_proportion / sample_proportion)
 
-# head(weights_feb_strata)
-sum_man_feb <- round(summary(weights_feb_strata$weight), 2)
+sum_man_feb <- round(summary(weights_feb_strata_man$weight), 2)
 
 sum_man_feb_mat <-  matrix(as.numeric(sum_man_feb), nrow = 1, 
                           dimnames = list(c("Value"),
@@ -421,15 +406,15 @@ kable(sum_man_feb_mat,
 
 ```{r echo=FALSE}
 
-weights_feb_strata <- weights_feb_strata %>%
+weights_feb_strata_man <- weights_feb_strata_man %>%
   mutate(Survey = 'February') %>%
-  select(weight, Survey)
+  select(weight, Survey, age_group, gender, university_education)
 
-weights_aug_strata <- weights_aug_strata %>%
+weights_aug_strata_man <- weights_aug_strata_man %>%
   mutate(Survey = 'August') %>%
-  select(weight, Survey)
+  select(weight, Survey,  age_group, gender, university_education)
 
-combined_weights <- rbind(weights_feb_strata, weights_aug_strata)
+combined_weights <- rbind(weights_feb_strata_man, weights_aug_strata_man)
 
 ggplot(combined_weights, aes(x = weight, fill = Survey)) +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
@@ -444,14 +429,14 @@ ggplot(combined_weights, aes(x = weight, fill = Survey)) +
 ```
 
 ```{r echo=FALSE, warning=FALSE}
-plot_feb <- ggplot(weights_feb_strata, aes(x = weight)) +
+plot_feb <- ggplot(weights_feb_strata_man, aes(x = weight)) +
   geom_histogram(bins = 100, fill = "blue", color = "black", alpha = 0.5) +
   theme_minimal() +
   labs(title = "February: Distribution of Weights",
        x = "Weight",
        y = "Frequency")
 
-plot_aug <- ggplot(weights_aug_strata, aes(x = weight)) +
+plot_aug <- ggplot(weights_aug_strata_man, aes(x = weight)) +
   geom_histogram(bins = 100, fill = "red", color = "black", alpha = 0.5) +
   theme_minimal() +
   labs(title = "August: Distribution of Weights",
@@ -466,4 +451,14 @@ Calculating weights this way gives us the same overall picture. The main differe
 For **February** survey, the difference (max weight / median weight) with `postStratify` is **`r round(sum_feb["Max."] / sum_feb["Median"], 2)`**, but with simple manually created weights it is **`r round(sum_man_feb["Max."] / sum_man_feb["Median"], 2)`**. For **August** survey, the difference with `postStratify` is **`r round(sum_aug["Max."] / sum_aug["Median"], 2)`**, but with simple manually created weights it is **`r round(sum_man_aug["Max."] / sum_man_aug["Median"], 2)`**.
 
 Note that some observations in February survey have a weight of zero because they do not exist in the population census. These are women 18-19 years old with university education. My suspicion on why we have these observations is that some respondents might have misreported their education attainment. 
+```{r}
+# survey_feb <- survey_feb %>%
+#   left_join(weights_feb_strata_man, by = c("age_group", "gender", "university_education")) %>%
+#   rename(weight_manually_calculated = weight) %>% 
+#   select(-Survey)
+
+# write.csv(survey_feb, "data/surveys/survey_feb_weights.csv", row.names = FALSE)
+
+```
+
 
