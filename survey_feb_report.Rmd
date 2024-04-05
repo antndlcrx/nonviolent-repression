@@ -1,14 +1,14 @@
 ---
 title: "February Survey Report"
 author: "Maksim Zubok"
-date: "Date"
+date: 
 output: 
   pdf_document:
     latex_engine: lualatex
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,
+knitr::opts_chunk$set(echo = FALSE,
                       warning = FALSE,
                       message = FALSE)
 
