@@ -1,0 +1,141 @@
+---
+title: "March Survey Report"
+author: "Maksim Zubok"
+date: 
+output: 
+  pdf_document:
+    latex_engine: lualatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE)
+
+Sys.getlocale()
+# Set this to a locale that supports Cyrillic, for example, on Windows
+Sys.setlocale("LC_ALL", "Russian")
+
+##### Set Up #####
+pacman::p_load(tidyverse, readr, broom, 
+               lubridate, gt, gtsummary, survey, readxl,
+               gridExtra, knitr, haven)
+
+# categories for education
+uni_education <- c("Высшее образование (магистратура)",
+                   "Высшее образование (бакалавриат / специалитет)",
+                   "Научная степень (кандидат, доктор наук)")
+
+# load levada data
+levada_omnibus <- read_sav("data/surveys/levada_omnibus") %>% 
+  mutate(gender = fct_recode(as.factor(qS1),
+                          "Man"= "1",
+                          "Woman" = "2"),
+          #adjust age
+          age_group = case_when(
+            as.numeric(qS2) %in% c(18:24) ~ '18-24',
+            as.numeric(qS2) %in% c(25:34) ~ '25-34',
+            as.numeric(qS2) %in% c(35:44) ~ '35-44',
+            as.numeric(qS2) %in% c(45:54) ~ '45-54',
+            as.numeric(qS2) %in% c(55:64) ~ '55-64',
+            as.numeric(qS2) >= 65 ~ '65+',
+            TRUE ~ NA),
+         university_education = case_when(qS3 == 6 ~ "BA+",
+                                     TRUE ~ "BA-")
+         )
+
+
+# load survey data
+survey_march <- read_csv("data/surveys/survey_march_post_election.csv",
+                         locale = locale(encoding = "UTF-8")) %>% 
+  mutate(gender = fct_recode(Q4,
+                          "Man"= "Мужской",
+                          "Woman" = "Женский"),
+          #adjust age
+          age_group = case_when(
+            as.numeric(Q1) %in% c(18:24) ~ '18-24',
+            as.numeric(Q1) %in% c(25:34) ~ '25-34',
+            as.numeric(Q1) %in% c(35:44) ~ '35-44',
+            as.numeric(Q1) %in% c(45:54) ~ '45-54',
+            as.numeric(Q1) %in% c(55:64) ~ '55-64',
+            as.numeric(Q1) >= 65 ~ '65+',
+            TRUE ~ NA),
+         university_education = case_when(Q5 %in% uni_education ~ "BA+",
+                                     TRUE ~ "BA-")
+         )
+
+survey_feb <- read_xlsx("data/surveys/survey_feb.xlsx")[-1, ] %>% 
+  mutate(gender = fct_recode(as.factor(Q4),
+                          "Man"= "Мужской",
+                          "Woman" = "Женский"),
+          #adjust age
+          age_group = case_when(
+            as.numeric(Q1) %in% c(18:24) ~ '18-24',
+            as.numeric(Q1) %in% c(25:34) ~ '25-34',
+            as.numeric(Q1) %in% c(35:44) ~ '35-44',
+            as.numeric(Q1) %in% c(45:54) ~ '45-54',
+            as.numeric(Q1) %in% c(55:64) ~ '55-64',
+            as.numeric(Q1) >= 65 ~ '65+',
+            TRUE ~ NA),
+         university_education = case_when(Q5 %in% uni_education ~ "BA+",
+                                     TRUE ~ "BA-")
+         )
+
+survey_aug <- read_csv("data/surveys/survey_aug.csv",
+                       locale = locale(encoding = "UTF-8")) %>% 
+  # adjust education
+  # education %in% na_education ~ "NA"
+  filter(gender != "no_answer") %>% 
+    mutate(university_education = case_when(
+      education %in% uni_education ~ "BA+",
+      TRUE ~ "BA-"),
+      gender = fct_recode(gender,
+                             "Man"= "Мужской",
+                             "Woman" = "Женский"),
+      university_education = case_when(education %in% uni_education ~ "BA+",
+                                     TRUE ~ "BA-")
+    )
+
+
+# helper funcitons
+calculate_shares <- function(dataset, dataset_name) {
+  dataset %>%
+    pivot_longer(cols = c(age_group, gender, university_education), names_to = "Variable", values_to = "Values") %>%
+    group_by(Variable, Values) %>%
+    summarise(Share = n() / nrow(dataset), .groups = 'drop') %>%
+    mutate(Survey = dataset_name,
+           Share = round(Share, 2))
+}
+```
+
+## Sample Comparison against Levada Benchmark
+
+
+Table 1 compares the demographic
+composition of Qualtrics samples collected in August, February, and March to nationally representative Levada Omnibus survey.
+
+```{r}
+shares_levada <- calculate_shares(levada_omnibus, "Levada")
+shares_survey_march <- calculate_shares(survey_march, "Q. March")
+shares_survey_feb <- calculate_shares(survey_feb, "Q. February")
+shares_survey_aug <- calculate_shares(survey_aug, "Q. August")
+
+
+combined_shares <- bind_rows(shares_levada,
+                             shares_survey_march,
+                             shares_survey_feb,
+                             shares_survey_aug) %>%
+  pivot_wider(names_from = Survey, values_from = Share) %>% 
+  mutate(Variable = case_when(
+    Variable == "age_group" ~ "Age", # improve visibility
+    Variable == "gender" ~ "Gender",
+    Variable == "university_education" ~ "Education",
+    TRUE ~ Variable # default case to leave the variable name as it is
+  ))
+
+kable(combined_shares, caption = "Comparison of Category Shares by Variable",
+      align = "c",
+      format = "markdown")
+
+```
+The only major difference between all Qualtrics surveys and Levada Omnibus is the shares of education categories, with the former having twice as high of a share of people with completed university education. 
