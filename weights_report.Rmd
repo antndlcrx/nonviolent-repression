@@ -1,10 +1,11 @@
 ---
-title: "February Survey Report"
+title: "Report on Survey Weights"
 author: "Maksim Zubok"
-date: 
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output: 
   pdf_document:
     latex_engine: lualatex
+    toc: True
 ---
 
 ```{r setup, include=FALSE}
@@ -19,7 +20,15 @@ Sys.setlocale("LC_ALL", "Russian")
 ##### Set Up #####
 pacman::p_load(tidyverse, readr, broom, 
                lubridate, gt, gtsummary, survey, readxl,
-               gridExtra, knitr)
+               gridExtra, knitr, haven)
+
+
+# categories for education
+uni_education <- c("Высшее образование (магистратура)",
+                   "Высшее образование (бакалавриат / специалитет)",
+                   "Научная степень (кандидат, доктор наук)")
+
+na_education <- c("Затрудняюсь ответить", "Отказ от ответа", "no_answer")
 
 # load levada data
 levada_omnibus <- read_sav("data/surveys/levada_omnibus") %>% 
@@ -39,7 +48,8 @@ levada_omnibus <- read_sav("data/surveys/levada_omnibus") %>%
 
 
 # load survey data
-survey_march <- read_csv("data/surveys/survey_march_post_election.csv", locale = locale(encoding = "UTF-8")) %>% 
+survey_march <- read_csv("data/surveys/survey_march_post_election.csv",
+                         locale = locale(encoding = "UTF-8")) %>% 
   mutate(gender = fct_recode(Q4,
                           "Man"= "Мужской",
                           "Woman" = "Женский"),
@@ -51,8 +61,11 @@ survey_march <- read_csv("data/surveys/survey_march_post_election.csv", locale =
             as.numeric(Q1) %in% c(45:54) ~ '45-54',
             as.numeric(Q1) %in% c(55:64) ~ '55-64',
             as.numeric(Q1) >= 65 ~ '65+',
-            TRUE ~ NA)
+            TRUE ~ NA),
+         university_education = case_when(Q5 %in% uni_education ~ "BA+",
+                                     TRUE ~ "BA-")
          )
+
 
 
 
@@ -65,12 +78,7 @@ names(column_descriptions) <- names(survey_feb)
 # remove first row
 survey_feb <- survey_feb[-1,]
 
-# categories for education
-uni_education <- c("Высшее образование (магистратура)",
-                   "Высшее образование (бакалавриат / специалитет)",
-                   "Научная степень (кандидат, доктор наук)")
 
-na_education <- c("Затрудняюсь ответить", "Отказ от ответа", "no_answer")
 
 survey_feb <- survey_feb %>%
   mutate(
@@ -183,24 +191,44 @@ colnames(ru_population_frame) <- c("gender", "age_group", "university_education"
                                    "Freq")
 
 
+# load levada data
+levada_omnibus <- read_sav("data/surveys/levada_omnibus") %>% 
+  mutate(gender = fct_recode(as.factor(qS1),
+                          "Man"= "1",
+                          "Woman" = "2"),
+          #adjust age
+          age_group = case_when(
+            as.numeric(qS2) %in% c(18:24) ~ '18-24',
+            as.numeric(qS2) %in% c(25:34) ~ '25-34',
+            as.numeric(qS2) %in% c(35:44) ~ '35-44',
+            as.numeric(qS2) %in% c(45:54) ~ '45-54',
+            as.numeric(qS2) %in% c(55:64) ~ '55-64',
+            as.numeric(qS2) >= 65 ~ '65+',
+            TRUE ~ NA),
+         university_education = case_when(qS3 == 6 ~ "BA+",
+                                     TRUE ~ "BA-")
+         )
+
 
 
 # helper funcitons
-calculate_shares <- function(dataset, variable_name) {
+calculate_shares <- function(dataset, dataset_name) {
   dataset %>%
-    group_by(!!sym(variable_name)) %>%
-    summarise(count = n()) %>%
-    mutate(share = count / sum(count)) %>%
-    select(!!sym(variable_name), share)
+    pivot_longer(cols = c(age_group, gender, university_education), names_to = "Variable", values_to = "Values") %>%
+    group_by(Variable, Values) %>%
+    summarise(Share = n() / nrow(dataset), .groups = 'drop') %>%
+    mutate(Survey = dataset_name,
+           Share = round(Share, 2))
 }
+
 ```
 
-## Intro
+## Introduction
 
-To create weights, I am working with the 2020
+To create weights for all surveys, we are working with the 2020
 [census data](https://github.com/antndlcrx/nonviolent-repression/blob/main/data/surveys/Tom3_tab1_VPN-2020.xlsx), particularly the cross tabbed gender, age, and university education file [here](https://github.com/antndlcrx/nonviolent-repression/blob/main/data/surveys/ru_population_frame.csv). 
 
-I did not include information about region of residence, even though we could do it after harmonising census data with the survey. 
+We do not include information about region of residence, even though we could do it after harmonising census data with the survey. 
 
 ```{r}
 kable(head(ru_population_frame, 5),
@@ -213,8 +241,49 @@ kable(head(ru_population_frame, 5),
 
 ## Sample to Population Comparison
 
+To compare our samples to the population, we do two comparisons. First, we compare them to a nationally representative Levada omnibus survey. Second, we compare them to the 2020 Census. 
 
-```{r, echo=FALSE, fig.width=20, fig.height=7}
+The Table \ref{tab:omnibus_shares} compares the demographic
+composition of Qualtrics samples collected in August, February, and March to nationally representative Levada Omnibus survey.
+
+\newpage
+
+```{r}
+shares_levada <- calculate_shares(levada_omnibus, "Levada")
+shares_survey_march <- calculate_shares(survey_march, "Q. March")
+shares_survey_feb <- calculate_shares(survey_feb, "Q. February")
+shares_survey_aug <- calculate_shares(survey_aug, "Q. August")
+
+
+combined_shares <- bind_rows(shares_levada,
+                             shares_survey_march,
+                             shares_survey_feb,
+                             shares_survey_aug) %>%
+  pivot_wider(names_from = Survey, values_from = Share) %>% 
+  mutate(Variable = case_when(
+    Variable == "age_group" ~ "Age", # improve visibility
+    Variable == "gender" ~ "Gender",
+    Variable == "university_education" ~ "Education",
+    TRUE ~ Variable # default case to leave the variable name as it is
+  ))
+
+kable(combined_shares, caption = "Comparison of Category Shares by Variable\\label{tab:omnibus_shares}",
+      align = "c",
+      format = "markdown")
+```
+
+\newpage
+
+The Figure \ref{fig:census_comparison} depicts strata shares compared to the 2020 Census. 
+
+```{r census_comparison, fig.cap="Demographic Comparison on Census 2020\\label{fig:census_comparison}", echo=FALSE, fig.height=8, fig.width=12}
+survey_march_strata <- survey_march %>% 
+  group_by(gender, age_group, university_education) %>% 
+  summarise(count = n()) %>%
+  mutate(proportion = count / nrow(survey_feb),
+         source = "March Survey")
+
+
 survey_feb_strata <- survey_feb %>% 
   group_by(gender, age_group, university_education) %>% 
   summarise(count = n()) %>%
@@ -232,7 +301,7 @@ pop_strata <- ru_population_frame %>%
   mutate(proportion = Freq/sum(Freq),
          source = "Census 2020")
 
-combined_strata <- combined_strata <- rbind(survey_feb_strata, survey_aug_strata, pop_strata) 
+combined_strata <- combined_strata <- rbind(survey_march_strata, survey_feb_strata, survey_aug_strata, pop_strata) 
 
 census_for_feb <- combined_strata %>% 
   filter(source == "Census 2020") %>% 
@@ -247,19 +316,21 @@ ggplot(combined_strata, aes(x = university_education,
                             y = proportion,
                             color = source, shape = source)) +
   geom_point(size = 3) +
-  geom_line(aes(group = interaction(age_group, university_education))) +
+  # geom_line(aes(group = interaction(age_group, university_education))) +
   facet_grid(gender ~ age_group) +
-  scale_color_manual(values = c("Census 2020" = "red", "February Survey" = "lightblue", "August Survey" = "darkgreen")) +
-  scale_shape_manual(values = c("Census 2020" = 16, "February Survey" = 17, "August Survey" = 18)) +
+  scale_color_manual(values = c("Census 2020" = "red", "March Survey" = "purple", 
+                                "February Survey" = "lightblue", "August Survey" = "darkgreen")) +
+  scale_shape_manual(values = c("Census 2020" = 16,"March Survey" = 15,
+                                "February Survey" = 17, "August Survey" = 18)) +
   labs(x = "University Education", y = "Proportion", shape = "Source", color = "Source") +
   theme(legend.position = "bottom") +
   theme_bw()
 
 ```
 
-The **main disparities between the February and the 2020 Census* are: 
+The main observations are: 
 
-- The biggest disparities are is women 55-64 and 65+ without education. The survey has `r nrow(survey_feb %>% filter(gender == "Woman" & age >= 65 & university_education == "BA+"))`` women in the latter category. 
+- The biggest disparities are is women 55-64 and 65+ without education. For instance, the February survey has `r nrow(survey_feb %>% filter(gender == "Woman" & age >= 65 & university_education == "BA+"))` women in the latter category. 
 - We have oversampled young women, especially 25-34 years old with university education, and undersampled men without university education across all age categories except 55- and 65+. 
 
 
@@ -267,6 +338,46 @@ The **main disparities between the February and the 2020 Census* are:
 
 To compute post-stratification weights we rely on the `postStratify` function from the `survey` package. The function adjusts the sampling and replicate weights so that the joint distribution of a set of
 post-stratifying variables matches the known population joint distribution. **However, the package documentation does not describe how exactly the adjustment is implemented.**
+
+### March
+
+```{r}
+unweighted_data <- svydesign(ids = ~1, data = survey_march)
+
+
+weighted <- postStratify(unweighted_data, ~age_group + gender + university_education,
+                         ru_population_frame, partial=TRUE)
+
+# save weights 
+survey_march$weight_poststratify <- weights(weighted)
+
+sum_march <- round(summary(weights(weighted)), 2)
+
+sum_march_mat <-  matrix(as.numeric(sum_march), nrow = 1, 
+                          dimnames = list(c("Value"),
+                          names(sum_march)
+                          )
+                          )
+kable(sum_march_mat, 
+      caption = "March Survey PostStratify Weights Summary", 
+      align = 'c', 
+      format = "markdown")
+```
+
+The table below explores shows strata that were assigned the highest weight. 
+
+```{r}
+top_five_rows_march <- survey_march  %>%
+  distinct(weight_poststratify, .keep_all = TRUE) %>% 
+  arrange(desc(weight_poststratify)) %>% 
+  select(age_group, gender, university_education, weight_poststratify)%>% 
+  head(5)
+
+kable(top_five_rows_march, caption = "March Survey, Top Five Rows by Weight", align = 'c')
+```
+
+
+### February
 
 ```{r }
 ## survey library ##
@@ -294,7 +405,18 @@ kable(sum_feb_mat,
 ```
 Note: some strata had no observations in the survey (NA on education for some age gender groups). This means we had to ignore them in producing weights. 
 
+```{r echo=FALSE}
+top_five_rows_feb <- survey_feb %>%
+  distinct(weight_poststratify, .keep_all = TRUE) %>%  
+  arrange(desc(weight_poststratify)) %>%
+  select(age_group, gender, university_education, weight_poststratify) %>%
+  slice_head(n = 5)
 
+kable(top_five_rows_feb, caption = "February Survey, Top Five Rows by Unique Weight", align = 'c')
+
+```
+
+### August
 
 ```{r }
 ## survey library ##
@@ -325,18 +447,6 @@ For August, we also see that some weights are much larger than others. As you ca
 
 The largest weights in both surveys relate to different population groups.
 
-
-```{r echo=FALSE}
-top_five_rows_feb <- survey_feb %>%
-  distinct(weight_poststratify, .keep_all = TRUE) %>%  
-  arrange(desc(weight_poststratify)) %>%
-  select(age_group, gender, university_education, weight_poststratify) %>%
-  slice_head(n = 5)
-
-kable(top_five_rows_feb, caption = "February Survey, Top Five Rows by Unique Weight", align = 'c')
-
-```
-
 ```{r echo=FALSE}
 top_five_rows_aug <- survey_aug  %>%
   distinct(weight_poststratify, .keep_all = TRUE) %>% 
@@ -347,8 +457,12 @@ top_five_rows_aug <- survey_aug  %>%
 kable(top_five_rows_aug, caption = "August Survey, Top Five Rows by Weight", align = 'c')
 ```
 
+\newpage
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.height=8, fig.width=12}
+survey_march_selected <- survey_march %>%
+  mutate(Survey = 'March') %>%
+  select(weight_poststratify, Survey)
 
 survey_feb_selected <- survey_feb %>%
   mutate(Survey = 'February') %>%
@@ -358,12 +472,13 @@ survey_aug_selected <- survey_aug %>%
   mutate(Survey = 'August') %>%
   select(weight_poststratify, Survey)
 
-combined_weights <- rbind(survey_feb_selected, survey_aug_selected)
+combined_weights <- rbind(survey_march_selected, survey_feb_selected, survey_aug_selected)
 
 ggplot(combined_weights, aes(x = weight_poststratify, fill = Survey)) +
+  geom_histogram(data = subset(combined_weights, Survey == 'March'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'August'), bins = 100, alpha = 0.5, color = "black") +
-  scale_fill_manual(values = c("February" = "blue", "August" = "red")) +
+  scale_fill_manual(values = c("March" = "lightblue", "February" = "blue", "August" = "red")) +
   theme_minimal() +
   labs(title = "Distribution of Weights by Survey",
        x = "Weight",
@@ -372,22 +487,29 @@ ggplot(combined_weights, aes(x = weight_poststratify, fill = Survey)) +
 
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.height=8, fig.width=12}
+plot_march <- ggplot(survey_march_selected, aes(x = weight_poststratify)) +
+  geom_histogram(bins = 100, fill = "lightblue", color = "black", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+       x = "Weight",
+       y = "Frequency")
+
 plot_feb <- ggplot(survey_feb_selected, aes(x = weight_poststratify)) +
   geom_histogram(bins = 100, fill = "blue", color = "black", alpha = 0.5) +
   theme_minimal() +
-  labs(title = "February: Distribution of Weights",
+  labs(
        x = "Weight",
        y = "Frequency")
 
 plot_aug <- ggplot(survey_aug_selected, aes(x = weight_poststratify)) +
   geom_histogram(bins = 100, fill = "red", color = "black", alpha = 0.5) +
   theme_minimal() +
-  labs(title = "August: Distribution of Weights",
+  labs(
        x = "Weight",
        y = "Frequency")
 
-grid.arrange(plot_feb, plot_aug, ncol = 2)
+grid.arrange(plot_march, plot_feb, plot_aug, ncol = 3, top = "Distribution of Weights Across Months")
 ```
 
 
@@ -395,31 +517,50 @@ grid.arrange(plot_feb, plot_aug, ncol = 2)
 To check the plausibility of resulting weights, we create alternative weights based on the population frequencies of the combination of the same strata (Yana's approach). The weights are calculated for each category:
 \[ \text{weight}_i = \frac{\text{population frequency}_i}{\text{sample frequency}_i} \]
 
+### March
 
-```{r }
-# calculate weights and print the df with weights
-weights_aug_strata_man <- left_join(survey_aug_strata,
-                            pop_strata,
-                            c("gender", "age_group", "university_education")) %>% 
+```{r}
+survey_march_strata <- survey_march %>% 
+  group_by(gender, age_group, university_education) %>% 
+  summarise(count = n()) %>%
+  mutate(proportion = count / nrow(survey_march),
+         source = "March Survey")
+
+pop_strata <- ru_population_frame %>% 
+  ungroup() %>% 
+  mutate(proportion = Freq/sum(Freq),
+         source = "Census 2020")
+
+combined_strata <- combined_strata <- rbind(survey_march_strata,  pop_strata) 
+
+
+weights_march_strata_man <- left_join(survey_march_strata,
+                                    pop_strata,
+                                    c("gender", "age_group", "university_education")) %>% 
   rename(population_proportion = proportion.y,
          sample_proportion = proportion.x)  %>% 
   # calculate weights as popul prop/sample prop
   mutate(weight = population_proportion / sample_proportion)
 
-sum_man_aug <- round(summary(weights_aug_strata_man$weight), 2)
+survey_march <- survey_march %>%
+  left_join(weights_march_strata_man, by = c("age_group", "gender", "university_education")) %>%
+  rename(weight_manually_calculated = weight) 
 
-sum_man_aug_mat <-  matrix(as.numeric(sum_man_aug), nrow = 1, 
+sum_man_march <- round(summary(weights_march_strata_man$weight), 2)
+
+sum_man_march_mat <-  matrix(as.numeric(sum_man_march), nrow = 1, 
                           dimnames = list(c("Value"),
-                          names(sum_man_aug)
+                          names(sum_man_march)
                           )
                           )
 
-kable(sum_man_aug_mat, 
-      caption = "August Survey Weights Summary", 
+kable(sum_man_march_mat, 
+      caption = "March Survey Weights Summary", 
       align = 'c', 
       format = "markdown")
 ```
 
+### February
 
 ```{r }
 # calculate weights and print the df with weights
@@ -445,7 +586,37 @@ kable(sum_man_feb_mat,
       format = "markdown")
 ```
 
-```{r echo=FALSE}
+### August
+```{r }
+# calculate weights and print the df with weights
+weights_aug_strata_man <- left_join(survey_aug_strata,
+                            pop_strata,
+                            c("gender", "age_group", "university_education")) %>% 
+  rename(population_proportion = proportion.y,
+         sample_proportion = proportion.x)  %>% 
+  # calculate weights as popul prop/sample prop
+  mutate(weight = population_proportion / sample_proportion)
+
+sum_man_aug <- round(summary(weights_aug_strata_man$weight), 2)
+
+sum_man_aug_mat <-  matrix(as.numeric(sum_man_aug), nrow = 1, 
+                          dimnames = list(c("Value"),
+                          names(sum_man_aug)
+                          )
+                          )
+
+kable(sum_man_aug_mat, 
+      caption = "August Survey Weights Summary", 
+      align = 'c', 
+      format = "markdown")
+```
+
+\newpage
+
+```{r echo=FALSE, fig.height=8, fig.width=12}
+weights_march_strata_man <- weights_march_strata_man %>%
+  mutate(Survey = 'March') %>%
+  select(weight, Survey, age_group, gender, university_education)
 
 weights_feb_strata_man <- weights_feb_strata_man %>%
   mutate(Survey = 'February') %>%
@@ -455,12 +626,13 @@ weights_aug_strata_man <- weights_aug_strata_man %>%
   mutate(Survey = 'August') %>%
   select(weight, Survey,  age_group, gender, university_education)
 
-combined_weights <- rbind(weights_feb_strata_man, weights_aug_strata_man)
+combined_weights <- rbind(weights_march_strata_man, weights_feb_strata_man, weights_aug_strata_man)
 
 ggplot(combined_weights, aes(x = weight, fill = Survey)) +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'August'), bins = 100, alpha = 0.5, color = "black") +
-  scale_fill_manual(values = c("February" = "blue", "August" = "red")) +
+  geom_histogram(data = subset(combined_weights, Survey == 'March'), bins = 100, alpha = 0.5, color = "black") +
+  scale_fill_manual(values = c("February" = "blue", "August" = "red", "March" = "lightblue")) +
   theme_minimal() +
   labs(title = "Distribution of Weights by Survey",
        x = "Weight",
@@ -469,22 +641,23 @@ ggplot(combined_weights, aes(x = weight, fill = Survey)) +
 
 ```
 
-```{r echo=FALSE, warning=FALSE}
+```{r echo=FALSE, warning=FALSE, fig.height=8, fig.width=12}
 plot_feb <- ggplot(weights_feb_strata_man, aes(x = weight)) +
   geom_histogram(bins = 100, fill = "blue", color = "black", alpha = 0.5) +
   theme_minimal() +
-  labs(title = "February: Distribution of Weights",
-       x = "Weight",
-       y = "Frequency")
+  labs(x = "Weight", y = "Frequency")
 
 plot_aug <- ggplot(weights_aug_strata_man, aes(x = weight)) +
   geom_histogram(bins = 100, fill = "red", color = "black", alpha = 0.5) +
   theme_minimal() +
-  labs(title = "August: Distribution of Weights",
-       x = "Weight",
-       y = "Frequency")
+  labs(x = "Weight", y = "Frequency")
 
-grid.arrange(plot_feb, plot_aug, ncol = 2)
+plot_march <- ggplot(weights_march_strata_man, aes(x = weight)) +
+  geom_histogram(bins = 100, fill = "lightblue", color = "black", alpha = 0.5) +
+  theme_minimal() +
+  labs(x = "Weight", y = "Frequency")
+
+grid.arrange(plot_feb, plot_aug, plot_march, ncol = 3, top = "Distribution of Weights Across Months")
 ```
 
 Calculating weights this way gives us the same overall picture. The main difference is in the orders of magnitude between the median weight and the tail (highest weight). 
