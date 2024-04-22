@@ -1,0 +1,60 @@
+---
+title: "Acled Variables Book"
+author: ""
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: 
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, rio, ggplot2, lubridate)
+
+acled <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_deberta_preds_05_02_2024.csv")
+
+man_labls_summary = acled %>% group_by(year) %>% summarise(n_labs = sum(!is.na(topic_manual)))
+```
+
+# Hand-Coded Labels
+
+- `topic_manual` refers to protest topics assigned manually. There are `r sum(!is.na(acled$topic_manual))`. These labels we use as ground-truth labels to train a supervised classifier with which we get the `pred_labels` variable. To label `topic_manual`, we took 100 random observations from 2018, 2019, and 2023 and combined them with previously coded 2020, 2021, and 2022 (which have 1237, 1570, and 1303 observations respectively)
+- `pro_regime` refers to whether a protest event is pro or anti regime. This is also a manually coded variable. As of the point of the report, it is not used to train any classifiers. Observations are coded for 2018, 2019, 2020, and 2023 years.
+- `war_related` is a manually created variable that captures if a protest is related to the 2022 invasion of Ukraine or not. As of the point of the report, it is not used to train any classifiers.
+
+# Automated Labels
+
+- `pred_labels` are protest labels assigned via classification with deberta model fine-tuned on `topic_manual`. The [code](https://github.com/antndlcrx/nonviolent-repression/blob/main/code/acled/protest_type_classification_deberta.py) and [report](https://github.com/antndlcrx/nonviolent-repression/blob/main/deberta_report_06_02.pdf) on classification are documented in the attached links. 
+- `pro_kremlin_indicator` is a binary variable that accounts whether an event was organised by a pro-kremlin organisation. The [code](https://github.com/antndlcrx/nonviolent-repression/blob/main/code/acled/acled_pro_kremlin_indicator.py) to create the variable is linked. Pro-kremlin organisations are a subset of organisations recorded in `assoc_actor_1`, namely: 
+  - 'ER: United Russia'
+  - 'Former Government of Russia (2000-)'
+  - 'Former Military Forces of Russia (2000-)'
+  - 'Former Police Forces of Russia (2000-)'
+  - 'Government of Russia (2000-) Republic of Chechnya'
+  - 'Military Forces of Russia (2000-)'
+  - 'Military Forces of Russia (2000-) National Guard - Special Purpose Police Unit'
+  - 'Motherland Party'
+  - 'NOD: National Liberation Movement'
+  - 'NPSR: National Patriotic Forces of Russia'
+  - "NPSR: People's Patriotic Union of Russia"
+  - 'New People'
+  - 'Police Forces of Russia (2000-)'
+  - 'VVPOD: Young Army Cadets National Movement'
+  - "Zakhar Prilepin's Guard"
+
+- 'authorized' is a count variable that captures if (and how many times) the following keywords are used in the `notes` variable. The variabe aims to proxy if an event was **authorised**. [Code](https://github.com/antndlcrx/nonviolent-repression/blob/main/code/acled/acled_protest_auth_elections.R) to create the variable is here (section: "(un)authorised indicator").
+  - "was authorized"
+  - "an authorized"
+  - "was approved"
+  - "was sanctioned"
+  - "authorized protest*"
+  
+- `unauthorised` is a count variable that captures if (and how many times) the following keywords are used in the `notes` variable. The variabe aims to proxy if an event was **not authorised**. [Code](https://github.com/antndlcrx/nonviolent-repression/blob/main/code/acled/acled_protest_auth_elections.R) to create the variable is here (section: "(un)authorised indicator"). 
+  - "not authorized"
+  - "unauthorized"
+  - "unlawful"
+  - "unsanctioned"
+  - "did not approve"
+  - "did not authorize"
+  - "not sanctioned"
+  - "not been authorized"
