@@ -2,7 +2,7 @@
 
 pacman::p_load(tidyverse, rio, ggplot2, lubridate)
 
-acled <- import("data/processed_data/acled_types_auth_2018_2023.csv") 
+acled <- import("data/acled_processed_data/acled_deberta_preds_05_02_2024.csv") 
 
 
 ## unique observations 
@@ -16,21 +16,21 @@ row_ids <- which(duplicates)
 
 # Print events
 acled$notes[row_ids]
-
+acled_clean <- acled[!duplicated(acled$notes), ]
 
 # Convert date column to Date object and create month-year object 
 acled <- acled %>% 
   mutate(date = dmy(event_date),
          month_year = format(date, "%Y-%m"))
 
-# create a subset from Jul 2021 to end Dec 2022
-acled_subset <- acled %>% 
-  # select(c(notes, date, protest_type, proportion,
-  #          pro_kremlin_indicator, event_id_cnty)) %>% 
-  filter(date >= as.Date("2021-07-01") & date <= as.Date("2022-12-31"))
-
-# Save as CSV
-write.csv(acled_subset, "data/processed_data/acled_preprocessed_jul21_dec22.csv", row.names = FALSE)
+# # create a subset from Jul 2021 to end Dec 2022
+# acled_subset <- acled %>% 
+#   # select(c(notes, date, protest_type, proportion,
+#   #          pro_kremlin_indicator, event_id_cnty)) %>% 
+#   filter(date >= as.Date("2021-07-01") & date <= as.Date("2022-12-31"))
+# 
+# # Save as CSV
+# write.csv(acled_subset, "data/processed_data/acled_preprocessed_jul21_dec22.csv", row.names = FALSE)
 
 # Save as Excel
 # write.xlsx(acled_subset, "acled_preprocessed_jul21_dec22.xlsx", rowNames = FALSE)
@@ -39,7 +39,7 @@ write.csv(acled_subset, "data/processed_data/acled_preprocessed_jul21_dec22.csv"
 #### 1. Time-series line plot of the monthly number of unique protests in Russia ####
 
 # Count unique observations of 'notes' for each month
-unique_counts <- acled %>%
+unique_counts <- acled_clean %>%
   filter(pro_kremlin_indicator != 1) %>% # remove pro-krml
   group_by(month_year) %>%
   summarise(unique_notes = n_distinct(notes))%>% # counting unique events (notes)
@@ -63,10 +63,10 @@ ggsave("outputs/daily_unique_protests_plot.png", plot = monthly_n_plot, width = 
 
 #### 2. subsetting political and non-political protests; ####
 
-unique_counts_polit <- acled %>%
+unique_counts_polit <- acled_clean %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(
-    protest_type == "political" ~ "political",
+    pred_labels == "political" ~ "political",
     TRUE ~ "other"),
     month_year = as.Date(paste0(month_year, "-01"))) %>%
   group_by(month_year, polit_indicator) %>%
@@ -89,18 +89,46 @@ political_protests_plot <- ggplot(unique_counts_polit, aes(x = month_year, y = u
 
 ggsave("outputs/political_protests_plot.png", plot = political_protests_plot, width = 10, height = 6, dpi = 300)
 
+#### 2.5 Protests by Type ####
+
+unique_counts_by_type <- acled_clean %>%
+  filter(pro_kremlin_indicator != 1) %>%
+  mutate(
+    month_year = as.Date(paste0(month_year, "-01"))) %>%
+  group_by(month_year, pred_labels) %>%
+  summarise(unique_notes = n_distinct(notes))
+
+
+# Plotting
+protests_by_type_plot <- ggplot(unique_counts_by_type, aes(x = month_year, y = unique_notes, color = pred_labels)) +
+  geom_line() +
+  geom_point() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
+  labs(title = "Monthly Number of Unique Protests in Russia by Protest Type",
+       x = "",
+       y = "Number of Unique Protests",
+       linetype = "",
+       color = "Protest Type") +  # Set legend title to no title
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red") 
+  # scale_linetype_manual(values = c("political" = "solid", "other" = "dotdash")) 
+
+ggsave("outputs/protests_by_type_plot.png", plot = political_protests_plot, width = 10, height = 6, dpi = 300)
+
+
 
 #### 3. Time-series line plot of the monthly share of unauthorised ####
 
 # Prepare the data
-unique_counts_share <- acled %>%
+unique_counts_share <- acled_clean %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(authorized_status = case_when(
     authorized >= 1 & unauthorized == 0 ~ "authorized" ,
     unauthorized >= 1 & authorized == 0 ~ "unauthorized",
     TRUE ~ "na"
   ),
-         month_year = as.Date(paste0(year(date), "-", month(date), "-01"))) %>%
+         month_year = as.Date(paste0(month_year, "-01"))) %>%
   group_by(month_year, authorized_status) %>%
   summarise(count = n_distinct(notes)) %>%
   spread(authorized_status, count, fill = 0) %>% # Spread data for calculation
@@ -125,16 +153,16 @@ ggsave("outputs/unauthorised_protests_plot.png", plot = unauthorised_protests_pl
 #### 4 share of unauthorized political and unauthorized non-political ####
 
 # Prepare the data
-unique_counts_share <- acled %>%
+unique_counts_share <- acled_clean %>%
   filter(pro_kremlin_indicator != 1) %>%
-  mutate(polit_indicator = case_when(protest_type == "political" ~ "political",
+  mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
     TRUE ~ "other"),
     authorized_status = case_when(
       authorized == 1 ~ "authorized",
       unauthorized ==1 & authorized == 0 ~ "unauthorized",
       TRUE ~ "na"
     ),
-    month_year = as.Date(paste0(year(date), "-", month(date), "-01"))) %>%
+    month_year = as.Date(paste0(month_year, "-01"))) %>%
   group_by(month_year, polit_indicator, authorized_status) %>%
   summarise(count = n_distinct(notes)) %>%
   spread(authorized_status, count, fill = 0) %>% # Spread data for calculation
@@ -160,9 +188,9 @@ ggsave("outputs/unauthorised_political_protests_plot.png", plot = unauthorised_p
 #### 5.1 Share of protests by type facing Arrests #### 
 
 # Prepare the data
-unique_counts_arrests_share <- acled %>%
+unique_counts_arrests_share <- acled_clean %>%
   filter(pro_kremlin_indicator != 1) %>%
-  mutate(polit_indicator = case_when(protest_type == "political" ~ "political",
+  mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
                                      TRUE ~ "other"),
          arrests = ifelse(sub_event_type %in% c("Protest with intervention", 
                                                 "Excessive force against protesters"),
@@ -172,7 +200,7 @@ unique_counts_arrests_share <- acled %>%
            unauthorized ==1 & authorized == 0 ~ "unauthorized",
            TRUE ~ NA
          ),
-         month_year = as.Date(paste0(year(date), "-", month(date), "-01"))) %>%
+         month_year = as.Date(paste0(month_year, "-01"))) %>%
   group_by(month_year, arrests) %>%
   summarise(count = n_distinct(notes)) %>%
   spread(arrests, count, fill = 0) %>% # Spread data for calculation
@@ -199,9 +227,9 @@ ggsave("outputs/share_arrests_plot.png", plot = arrests_protests_plot, width = 1
 #### 5.2. Share of protests by type facing Arrests #### 
 
 # Prepare the data
-unique_counts_arrests_share <- acled %>%
+unique_counts_arrests_share <- acled_clean %>%
   filter(pro_kremlin_indicator != 1) %>%
-  mutate(polit_indicator = case_when(protest_type == "political" ~ "political",
+  mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
                                      TRUE ~ "other"),
          arrests = ifelse(sub_event_type %in% c("Protest with intervention", 
                                                        "Excessive force against protesters"),
@@ -211,7 +239,7 @@ unique_counts_arrests_share <- acled %>%
            unauthorized ==1 & authorized == 0 ~ "unauthorized",
            TRUE ~ NA
          ),
-         month_year = as.Date(paste0(year(date), "-", month(date), "-01"))) %>%
+         month_year = as.Date(paste0(month_year, "-01"))) %>%
   group_by(month_year, polit_indicator, arrests) %>%
   summarise(count = n_distinct(notes)) %>%
   spread(arrests, count, fill = 0) %>% # Spread data for calculation
