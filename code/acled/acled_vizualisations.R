@@ -114,7 +114,7 @@ protests_by_type_plot <- ggplot(unique_counts_by_type, aes(x = month_year, y = u
   geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red") 
   # scale_linetype_manual(values = c("political" = "solid", "other" = "dotdash")) 
 
-ggsave("outputs/protests_by_type_plot.png", plot = political_protests_plot, width = 10, height = 6, dpi = 300)
+ggsave("outputs/protests_by_type_plot.png", plot = protests_by_type_plot, width = 10, height = 6, dpi = 300)
 
 
 
