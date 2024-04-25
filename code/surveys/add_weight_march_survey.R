@@ -148,4 +148,4 @@ survey_march <- survey_march %>%
   left_join(weights_march_strata_man, by = c("age_group", "gender", "university_education")) %>%
   rename(weight_manually_calculated = weight) 
 
-write.csv(survey_march, "data/surveys/survey_march_weights.csv", row.names = FALSE)
+write_csv(survey_march, "data/surveys/survey_march_weights.csv")
