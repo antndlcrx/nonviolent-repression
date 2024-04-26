@@ -2,6 +2,10 @@
 title: "Results Weighted"
 author: "Maksim Zubok"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
 output: 
   pdf_document:
     latex_engine: lualatex
@@ -11,7 +15,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
                       warning = FALSE,
-                      message = FALSE)
+                      message = FALSE,
+                      results='asis')
 
 
 pacman::p_load(tidyverse, readr, broom, 
@@ -85,7 +90,7 @@ mean(qualtrics$comp,na.rm=T)
 
 ```
 
-## d
+## Treatments
 
 ```{r results='asis'}
 q1<-lm(outcome1 ~ t1*t2,data=qualtrics)
@@ -100,21 +105,36 @@ q1wm<-lm(outcome1 ~ t1*t2,data=qualtrics, weights=weight_manually_calculated)
 q2wm<-lm(outcome2 ~ t1*t2,data=qualtrics, weights=weight_manually_calculated)
 q3wm<-lm(outcome3 ~ t1*t2,data=qualtrics, weights=weight_manually_calculated)
 
-stargazer(q1, q1wp, q1wm, digits=2)
+stargazer(q1, q1wp, q1wm,
+          digits=2, title="Political Control",
+          column.labels=c("No Weight","Weight Post-Stratify","Weight Manually Calculated"),
+          dep.var.labels=c("Political Control"),
+          header=FALSE)
 
 ```
 
 ```{r}
-stargazer(q2, q2wp, q2wm, digits=2)
+stargazer(q2, q2wp, q2wm, digits=2,
+          title="Public Support",
+          column.labels=c("No Weight","Weight Post-Stratify","Weight Manually Calculated"),
+          dep.var.labels=c("Public Support"),
+          header=FALSE)
 ```
 
 ```{r}
-stargazer(q3, q3wp, q3wm, digits=2)
+stargazer(q3, q3wp, q3wm, digits=2,
+          title="Elite Control",
+          column.labels=c("No Weight","Weight Post-Stratify","Weight Manually Calculated"),
+          dep.var.labels=c("Elite Control"),
+          header=FALSE)
 ```
 
 
+\newpage
 
-## s
+\blandscape
+## Treatments and Competitivenes with Election Knowledge
+
 
 ```{r results='asis'}
 e1<-lm(outcome1 ~ elec.know2*t1 + t2,data=qualtrics)
@@ -126,6 +146,63 @@ c2<-lm(outcome2 ~ t1 + comp*t2,data=qualtrics)
 c3<-lm(outcome3 ~ t1 + comp*t2,data=qualtrics)
 
 
-stargazer(e1,c1,e2,c2,e3,c3,digits=2)
+stargazer(e1,c1,e2,c2,e3,c3,digits=2,
+          header=FALSE,
+          no.space = TRUE, # to remove the spaces after each 
+          column.sep.width = "3pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          dep.var.labels=c("Political Control", "Public Support", "Elite Control"),
+          title="No Weights"
+          )
 ```
 
+\elandscape
+
+\blandscape
+
+```{r results='asis'}
+e1<-lm(outcome1 ~ elec.know2*t1 + t2,data=qualtrics, weights=weight_poststratify)
+e2<-lm(outcome2 ~ elec.know2*t1 + t2,data=qualtrics, weights=weight_poststratify)
+e3<-lm(outcome3 ~ elec.know2*t1 + t2,data=qualtrics, weights=weight_poststratify) ###This is cool
+
+c1<-lm(outcome1 ~ t1 + comp*t2,data=qualtrics, weights=weight_poststratify)###This is cool
+c2<-lm(outcome2 ~ t1 + comp*t2,data=qualtrics, weights=weight_poststratify)
+c3<-lm(outcome3 ~ t1 + comp*t2,data=qualtrics, weights=weight_poststratify)
+
+
+stargazer(e1,c1,e2,c2,e3,c3,digits=2,
+          header=FALSE,
+          no.space = TRUE, # to remove the spaces after each 
+          column.sep.width = "3pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          dep.var.labels=c("Political Control", "Public Support", "Elite Control"),
+          title="Weight Post-Stratify"
+          )
+```
+
+\elandscape
+
+\blandscape
+
+```{r results='asis'}
+e1<-lm(outcome1 ~ elec.know2*t1 + t2,data=qualtrics,
+       weights=weight_manually_calculated)
+e2<-lm(outcome2 ~ elec.know2*t1 + t2,data=qualtrics, weights=weight_manually_calculated)
+e3<-lm(outcome3 ~ elec.know2*t1 + t2,data=qualtrics, weights=weight_manually_calculated) ###This is cool
+
+c1<-lm(outcome1 ~ t1 + comp*t2,data=qualtrics, weights=weight_manually_calculated)###This is cool
+c2<-lm(outcome2 ~ t1 + comp*t2,data=qualtrics, weights=weight_manually_calculated)
+c3<-lm(outcome3 ~ t1 + comp*t2,data=qualtrics, weights=weight_manually_calculated)
+
+
+stargazer(e1,c1,e2,c2,e3,c3,digits=2,
+          header=FALSE,
+          no.space = TRUE, # to remove the spaces after each 
+          column.sep.width = "3pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          dep.var.labels=c("Political Control", "Public Support", "Elite Control"),
+          title="Weight Manually Calculated"
+          )
+```
+
+\elandscape
