@@ -18,9 +18,15 @@ row_ids <- which(duplicates)
 acled$notes[row_ids]
 acled_clean <- acled[!duplicated(acled$notes), ]
 
+acled_clean <- acled_clean %>% 
+  mutate(
+    date = ymd(as.character(event_date)),
+    month_year = as.Date(paste0(month_year, "-01"))
+    )
+
 # Convert date column to Date object and create month-year object 
-acled <- acled %>% 
-  mutate(date = dmy(event_date),
+acled_clean <- acled_clean %>% 
+  mutate(date = ymd(event_date),
          month_year = format(date, "%Y-%m"))
 
 # # create a subset from Jul 2021 to end Dec 2022
@@ -35,28 +41,33 @@ acled <- acled %>%
 # Save as Excel
 # write.xlsx(acled_subset, "acled_preprocessed_jul21_dec22.xlsx", rowNames = FALSE)
 
+acled_subset_for_plot <- acled_clean %>% 
+  filter(date >= '2021-01-01')%>%
+  filter(pro_kremlin_indicator != 1) %>%
+  mutate(week = floor_date(date, unit = "week")) #floor_date() takes a date-time object and rounds it down to the nearest boundary of the specified time unit.
 
 #### 1. Time-series line plot of the monthly number of unique protests in Russia ####
 
 # Count unique observations of 'notes' for each month
-unique_counts <- acled_clean %>%
-  filter(pro_kremlin_indicator != 1) %>% # remove pro-krml
-  group_by(month_year) %>%
-  summarise(unique_notes = n_distinct(notes))%>% # counting unique events (notes)
-  mutate(month_year = ym(month_year))
+unique_counts <- acled_subset_for_plot %>%
+  filter(pro_kremlin_indicator != 1) %>%
+  mutate(week = floor_date(date, unit = "week")) %>%
+  group_by(week) %>%
+  summarise(unique_notes = n_distinct(notes))
 
-monthly_n_plot <- ggplot(unique_counts, aes(x = month_year, y = unique_notes)) +
+# Create the plot
+weekly_n_plot <- ggplot(unique_counts, aes(x = week, y = unique_notes)) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Number of Unique Protests in Russia",
-       x = "",
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y-%m", minor_breaks = "1 week") +
+  labs(title = "Weekly Number of Unique Protests in Russia",
+       x = "Week",
        y = "Number of Unique Protests") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
 
-monthly_n_plot
+weekly_n_plot
 
 ggsave("outputs/daily_unique_protests_plot.png", plot = monthly_n_plot, width = 10, height = 6, dpi = 300)
 
@@ -285,6 +296,22 @@ sampled_events <- filtered_df %>%
 
 sampled_events[c("notes", "unauthorized")]
 
+
+#### descriptive regressions ####
+
+# Group data by 'date' and count observations
+date_counts <- acled_clean %>%
+  group_by(date) %>%
+  summarise(protest_count = n())
+
+date_counts <- date_counts %>%
+  mutate(post_2022_02_24 = case_when(
+    date >= as.Date("2022-02-24") ~ 1,
+    TRUE ~ 0
+  ))
+
+all_protest_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
+summary(all_protest_reg)
 
 #### session info ####
 
