@@ -128,7 +128,7 @@ political_protests_plot <- ggplot(unique_counts_polit, aes(x = week, y = unique_
     date_breaks = "1 month",
     labels = function(x) format(x, "%B")
   ) +
-  labs(title = "Weekly Number of Unique Protests in Russia",
+  labs(title = "Weekly Number of Political Protests in Russia",
        x = "",
        y = "Number of Unique Protests") +
   theme_minimal() +
@@ -158,19 +158,30 @@ unique_counts_by_type <- acled_subset_for_plot %>%
 
 
 # Plotting
-protests_by_type_plot <- ggplot(unique_counts_by_type, aes(x = month_year, y = unique_notes, color = pred_labels)) +
+protests_by_type_plot <- ggplot(unique_counts_by_type, aes(x = week, y = unique_notes,
+                                                         color = pred_labels)) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Number of Unique Protests in Russia by Protest Type",
+  scale_x_date(
+    date_minor_breaks = "1 week",
+    date_breaks = "1 month",
+    labels = function(x) format(x, "%B")
+  ) +
+  labs(title = "Weekly Number of Protests by Type",
        x = "",
-       y = "Number of Unique Protests",
-       linetype = "",
-       color = "Protest Type") +  # Set legend title to no title
+       y = "Number of Unique Protests") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red") 
-  # scale_linetype_manual(values = c("political" = "solid", "other" = "dotdash")) 
+  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+           y = 160, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+           color = "blue", angle = 90, size = 3) + 
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 160, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 160, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
+
+protests_by_type_plot
 
 ggsave("outputs/protests_by_type_plot.png", plot = protests_by_type_plot, width = 10, height = 6, dpi = 300)
 
@@ -180,66 +191,90 @@ ggsave("outputs/protests_by_type_plot.png", plot = protests_by_type_plot, width 
 
 # Prepare the data
 unique_counts_share <- acled_subset_for_plot %>%
-  filter(pro_kremlin_indicator != 1) %>%
   mutate(authorized_status = case_when(
     authorized >= 1 & unauthorized == 0 ~ "authorized" ,
     unauthorized >= 1 & authorized == 0 ~ "unauthorized",
     TRUE ~ "na"
-  ),
-         month_year = as.Date(paste0(month_year, "-01"))) %>%
-  group_by(month_year, authorized_status) %>%
+  )) %>%
+  group_by(week, authorized_status) %>%
   summarise(count = n_distinct(notes)) %>%
   spread(authorized_status, count, fill = 0) %>% # Spread data for calculation
   mutate(share_unauthorized = unauthorized / (unauthorized + authorized + na)) %>%
-  select(month_year, share_unauthorized) # Select only necessary columns
+  select(week, share_unauthorized) # Select only necessary columns
 
 # Plot the data
-unauthorised_protests_plot <- ggplot(unique_counts_share, aes(x = month_year, y = share_unauthorized)) +
+unauthorised_protests_plot <- ggplot(unique_counts_share, aes(x = week, y = share_unauthorized
+                                                                )) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Share of Unauthorized Protests in Russia",
+  scale_x_date(
+    date_minor_breaks = "1 week",
+    date_breaks = "1 month",
+    labels = function(x) format(x, "%B")
+  ) +
+  labs(title = "Weekly Share of Unauthorised Protests in Russia",
        x = "",
-       y = "Share of Unauthorized Protests") +
+       y = "Share of Unauthorised Protests") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
+  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+           y = 0.7, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+           color = "blue", angle = 90, size = 3) + 
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 0.7, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 0.7, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
 
-ggsave("outputs/unauthorised_protests_plot.png", plot = unauthorised_protests_plot, width = 10, height = 6, dpi = 300)
-
+unauthorised_protests_plot
 
 #### 4 share of unauthorized political and unauthorized non-political ####
 
 # Prepare the data
 unique_counts_share <- acled_subset_for_plot %>%
-  filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
     TRUE ~ "other"),
     authorized_status = case_when(
       authorized == 1 ~ "authorized",
       unauthorized ==1 & authorized == 0 ~ "unauthorized",
       TRUE ~ "na"
-    ),
-    month_year = as.Date(paste0(month_year, "-01"))) %>%
-  group_by(month_year, polit_indicator, authorized_status) %>%
+    )) %>%
+  group_by(week, polit_indicator, authorized_status) %>%
   summarise(count = n_distinct(notes)) %>%
   spread(authorized_status, count, fill = 0) %>% # Spread data for calculation
   mutate(share_unauthorized = unauthorized / (unauthorized + authorized + na)) %>%
-  select(month_year, share_unauthorized) # Select only necessary columns
+  select(week, share_unauthorized) # Select only necessary columns
 
 
 # Plot the data
-unauthorised_political_protests_plot <- ggplot(unique_counts_share, aes(x = month_year, y = share_unauthorized, color = polit_indicator)) +
+unauthorised_political_protests_plot <- ggplot(unique_counts_share,
+                                               aes(x = week,
+                                                   y = share_unauthorized,
+                                                   linetype = polit_indicator)
+                                               ) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Share of Unauthorized Protests in Russia by Protest Type",
+  scale_x_date(
+    date_minor_breaks = "1 week",
+    date_breaks = "1 month",
+    labels = function(x) format(x, "%B")
+  ) +
+  labs(title = "Weekly Share of Unauthorised Political Protests in Russia",
        x = "",
-       y = "Share of Unauthorized Protests",
-       color = "Protest Type") +
+       y = "Share of Unauthorised Protests") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
+  scale_linetype_manual(values = c(political = "solid", other = "dashed")) + 
+  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+           y = 0.7, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+           color = "blue", angle = 90, size = 3) + 
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 0.7, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 0.7, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
+
+unauthorised_political_protests_plot
 
 ggsave("outputs/unauthorised_political_protests_plot.png", plot = unauthorised_political_protests_plot, width = 10, height = 6, dpi = 300)
 
@@ -247,7 +282,6 @@ ggsave("outputs/unauthorised_political_protests_plot.png", plot = unauthorised_p
 
 # Prepare the data
 unique_counts_arrests_share <- acled_subset_for_plot %>%
-  filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
                                      TRUE ~ "other"),
          arrests = ifelse(sub_event_type %in% c("Protest with intervention", 
@@ -257,27 +291,42 @@ unique_counts_arrests_share <- acled_subset_for_plot %>%
            authorized == 1 ~ "authorized",
            unauthorized ==1 & authorized == 0 ~ "unauthorized",
            TRUE ~ NA
-         ),
-         month_year = as.Date(paste0(month_year, "-01"))) %>%
-  group_by(month_year, arrests) %>%
+         )) %>%
+  group_by(week, arrests) %>%
   summarise(count = n_distinct(notes)) %>%
-  spread(arrests, count, fill = 0) %>% # Spread data for calculation
+  spread(arrests, count, fill = 0) %>% 
   mutate(share_arrests = arrests / (arrests + no_arrests)) %>%
-  select(month_year, share_arrests) # Select only necessary columns
+  select(week, share_arrests) 
 
 
 # Plot the data
-arrests_protests_plot <- ggplot(unique_counts_arrests_share, aes(x = month_year, y = share_arrests)) +
+arrests_protests_plot <- ggplot(unique_counts_arrests_share,
+                                aes(x = week,
+                                    y = share_arrests)
+) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Share of Protests with Arrests in Russia",
+  scale_x_date(
+    date_minor_breaks = "1 week",
+    date_breaks = "1 month",
+    labels = function(x) format(x, "%B")
+  ) +
+  labs(title = "Weekly Share of Protests with Arrests in Russia",
        x = "",
-       y = "",
-       color = "Protest Type") +
+       y = "") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
+  scale_linetype_manual(values = c(political = "solid", other = "dashed")) + 
+  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+           y = 0.7, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+           color = "blue", angle = 90, size = 3) + 
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 0.7, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 0.7, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
+
+arrests_protests_plot
 
 ggsave("outputs/share_arrests_plot.png", plot = arrests_protests_plot, width = 10, height = 6, dpi = 300)
 
@@ -286,7 +335,6 @@ ggsave("outputs/share_arrests_plot.png", plot = arrests_protests_plot, width = 1
 
 # Prepare the data
 unique_counts_arrests_share <- acled_subset_for_plot %>%
-  filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
                                      TRUE ~ "other"),
          arrests = ifelse(sub_event_type %in% c("Protest with intervention", 
@@ -296,27 +344,44 @@ unique_counts_arrests_share <- acled_subset_for_plot %>%
            authorized == 1 ~ "authorized",
            unauthorized ==1 & authorized == 0 ~ "unauthorized",
            TRUE ~ NA
-         ),
-         month_year = as.Date(paste0(month_year, "-01"))) %>%
-  group_by(month_year, polit_indicator, arrests) %>%
+         )) %>%
+  group_by(week, polit_indicator, arrests) %>%
   summarise(count = n_distinct(notes)) %>%
   spread(arrests, count, fill = 0) %>% # Spread data for calculation
   mutate(share_arrests = arrests / (arrests + no_arrests)) %>%
-  select(month_year, share_arrests) # Select only necessary columns
+  select(week, share_arrests) # Select only necessary columns
 
 
 # Plot the data
-arrests_type_protests_plot <- ggplot(unique_counts_arrests_share, aes(x = month_year, y = share_arrests, color = polit_indicator)) +
+arrests_type_protests_plot <- ggplot(unique_counts_arrests_share,
+                                     aes(x = week,
+                                         y = share_arrests,
+                                         linetype = polit_indicator)
+) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Share of Protests with Arrests in Russia by Protest Type",
+  scale_x_date(
+    date_minor_breaks = "1 week",
+    date_breaks = "1 month",
+    labels = function(x) format(x, "%B")
+  ) +
+  labs(title = "Weekly Share of Political Protests with Arrests in Russia",
        x = "",
-       y = "",
-       color = "Protest Type") +
+       y = "") +
   theme_minimal() +
+  scale_linetype_manual(values = c(political = "solid", other = "dashed")) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
+  scale_linetype_manual(values = c(political = "solid", other = "dashed")) + 
+  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+           y = 0.7, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+           color = "blue", angle = 90, size = 3) + 
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 0.7, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 0.7, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
+
+arrests_type_protests_plot
 
 ggsave("outputs/share_arrests_by_type_plot.png", plot = arrests_type_protests_plot, width = 10, height = 6, dpi = 300)
 
@@ -347,18 +412,18 @@ sampled_events[c("notes", "unauthorized")]
 #### descriptive regressions ####
 
 # Group data by 'date' and count observations
-date_counts <- acled_clean %>%
-  group_by(date) %>%
-  summarise(protest_count = n())
-
-date_counts <- date_counts %>%
-  mutate(post_2022_02_24 = case_when(
-    date >= as.Date("2022-02-24") ~ 1,
-    TRUE ~ 0
-  ))
-
-all_protest_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
-summary(all_protest_reg)
+# date_counts <- acled_clean %>%
+#   group_by(date) %>%
+#   summarise(protest_count = n())
+# 
+# date_counts <- date_counts %>%
+#   mutate(post_2022_02_24 = case_when(
+#     date >= as.Date("2022-02-24") ~ 1,
+#     TRUE ~ 0
+#   ))
+# 
+# all_protest_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
+# summary(all_protest_reg)
 
 #### session info ####
 
