@@ -428,6 +428,13 @@ ggsave("outputs/share_arrests_by_type_plot.png", plot = arrests_type_protests_pl
 # all_protest_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
 # summary(all_protest_reg)
 
+#### checking (un)authorised ####
+# acled_subset_for_plot %>%
+#   filter(authorized == 0 & unauthorized == 0) %>%
+#   summarize(count = n())
+
+
+
 #### session info ####
 
 # R version 4.3.1 (2023-06-16 ucrt)
