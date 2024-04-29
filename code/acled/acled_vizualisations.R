@@ -44,14 +44,14 @@ acled_clean <- acled_clean %>%
 acled_subset_for_plot <- acled_clean %>% 
   filter(date >= '2021-01-01')%>%
   filter(pro_kremlin_indicator != 1) %>%
-  mutate(week = floor_date(date, unit = "week")) #floor_date() takes a date-time object and rounds it down to the nearest boundary of the specified time unit.
+  mutate(week = ceiling_date(date, unit = "week")) 
 
 #### 1. Time-series line plot of the monthly number of unique protests in Russia ####
 
 # Count unique observations of 'notes' for each month
 unique_counts <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
-  mutate(week = floor_date(date, unit = "week")) %>%
+  mutate(week = ceiling_date(date, unit = "week")) %>%
   group_by(week) %>%
   summarise(unique_notes = n_distinct(notes))
 
@@ -59,54 +59,101 @@ unique_counts <- acled_subset_for_plot %>%
 weekly_n_plot <- ggplot(unique_counts, aes(x = week, y = unique_notes)) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 month", date_labels = "%Y-%m", minor_breaks = "1 week") +
+  scale_x_date(
+    date_minor_breaks = "1 week",
+    date_breaks = "1 month",
+    labels = function(x) format(x, "%B")
+  ) +
   labs(title = "Weekly Number of Unique Protests in Russia",
-       x = "Week",
+       x = "",
        y = "Number of Unique Protests") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red")
+  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+           y = 160, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+           color = "blue", angle = 90, size = 3) + 
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 160, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 160, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
+
 
 weekly_n_plot
 
 ggsave("outputs/daily_unique_protests_plot.png", plot = monthly_n_plot, width = 10, height = 6, dpi = 300)
 
+# daily_counts <- acled_subset_for_plot %>%
+#   filter(pro_kremlin_indicator != 1) %>%
+#   group_by(date) %>%
+#   summarise(unique_notes = n_distinct(notes))
+# 
+# # Create the plot
+# daily_n_plot <- ggplot(daily_counts, aes(x = date, y = unique_notes)) +
+#   geom_line() +
+#   geom_point() +
+#   scale_x_date(date_breaks = "1 month", labels = date_format("%B")) +
+#   labs(title = "Daily Number of Unique Protests in Russia",
+#        x = "",
+#        y = "Number of Unique Protests") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+#   annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+#            y = 160, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+#            color = "blue", angle = 90, size = 3) + 
+#   geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") 
+# 
+# daily_n_plot
+
 
 #### 2. subsetting political and non-political protests; ####
 
-unique_counts_polit <- acled_clean %>%
+unique_counts_polit <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(
     pred_labels == "political" ~ "political",
-    TRUE ~ "other"),
-    month_year = as.Date(paste0(month_year, "-01"))) %>%
-  group_by(month_year, polit_indicator) %>%
+    TRUE ~ "other")) %>% 
+  group_by(week, polit_indicator) %>%
   summarise(unique_notes = n_distinct(notes))
 
 
 # Plotting
-political_protests_plot <- ggplot(unique_counts_polit, aes(x = month_year, y = unique_notes, linetype = polit_indicator)) +
+political_protests_plot <- ggplot(unique_counts_polit, aes(x = week, y = unique_notes,
+                                                           linetype = polit_indicator)) +
   geom_line() +
   geom_point() +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", minor_breaks = "1 month") +
-  labs(title = "Monthly Number of Unique Protests in Russia",
+  scale_x_date(
+    date_minor_breaks = "1 week",
+    date_breaks = "1 month",
+    labels = function(x) format(x, "%B")
+  ) +
+  labs(title = "Weekly Number of Unique Protests in Russia",
        x = "",
-       y = "Number of Unique Protests",
-       linetype = "") +  # Set legend title to no title
+       y = "Number of Unique Protests") +
   theme_minimal() +
+  scale_linetype_manual(values = c(political = "solid", other = "dashed")) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "dashed", color = "red") +
-  scale_linetype_manual(values = c("political" = "solid", "other" = "dotdash")) 
+  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
+  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
+           y = 160, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
+           color = "blue", angle = 90, size = 3) + 
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 160, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 160, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
+
+
+political_protests_plot
+
 
 ggsave("outputs/political_protests_plot.png", plot = political_protests_plot, width = 10, height = 6, dpi = 300)
 
 #### 2.5 Protests by Type ####
 
-unique_counts_by_type <- acled_clean %>%
+unique_counts_by_type <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
-  mutate(
-    month_year = as.Date(paste0(month_year, "-01"))) %>%
-  group_by(month_year, pred_labels) %>%
+  group_by(week, pred_labels) %>%
   summarise(unique_notes = n_distinct(notes))
 
 
@@ -132,7 +179,7 @@ ggsave("outputs/protests_by_type_plot.png", plot = protests_by_type_plot, width 
 #### 3. Time-series line plot of the monthly share of unauthorised ####
 
 # Prepare the data
-unique_counts_share <- acled_clean %>%
+unique_counts_share <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(authorized_status = case_when(
     authorized >= 1 & unauthorized == 0 ~ "authorized" ,
@@ -164,7 +211,7 @@ ggsave("outputs/unauthorised_protests_plot.png", plot = unauthorised_protests_pl
 #### 4 share of unauthorized political and unauthorized non-political ####
 
 # Prepare the data
-unique_counts_share <- acled_clean %>%
+unique_counts_share <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
     TRUE ~ "other"),
@@ -199,7 +246,7 @@ ggsave("outputs/unauthorised_political_protests_plot.png", plot = unauthorised_p
 #### 5.1 Share of protests by type facing Arrests #### 
 
 # Prepare the data
-unique_counts_arrests_share <- acled_clean %>%
+unique_counts_arrests_share <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
                                      TRUE ~ "other"),
@@ -238,7 +285,7 @@ ggsave("outputs/share_arrests_plot.png", plot = arrests_protests_plot, width = 1
 #### 5.2. Share of protests by type facing Arrests #### 
 
 # Prepare the data
-unique_counts_arrests_share <- acled_clean %>%
+unique_counts_arrests_share <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(polit_indicator = case_when(pred_labels == "political" ~ "political",
                                      TRUE ~ "other"),
