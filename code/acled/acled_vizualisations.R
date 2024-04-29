@@ -81,7 +81,7 @@ weekly_n_plot <- ggplot(unique_counts, aes(x = week, y = unique_notes)) +
 
 weekly_n_plot
 
-ggsave("outputs/daily_unique_protests_plot.png", plot = monthly_n_plot, width = 10, height = 6, dpi = 300)
+ggsave("outputs/weekly_unique_protests_plot.png", plot = weekly_n_plot, width = 10, height = 6, dpi = 300)
 
 # daily_counts <- acled_subset_for_plot %>%
 #   filter(pro_kremlin_indicator != 1) %>%
@@ -227,6 +227,9 @@ unauthorised_protests_plot <- ggplot(unique_counts_share, aes(x = week, y = shar
   annotate(geom = "text", x = as.Date("2022-09-21"), y = 0.7, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
 
 unauthorised_protests_plot
+
+ggsave("outputs/unauthorised_protests_plot.png", plot = unauthorised_protests_plot, width = 10, height = 6, dpi = 300)
+
 
 #### 4 share of unauthorized political and unauthorized non-political ####
 
@@ -393,20 +396,20 @@ ggsave("outputs/share_arrests_by_type_plot.png", plot = arrests_type_protests_pl
 # end_date <- Sys.Date()
 # start_date <- end_date %m-% months(6)
 
-
-end_date <- as.Date("2020-06-01")
-start_date <- as.Date("2020-03-01")
-
-filtered_df <- acled %>% 
-  filter(unauthorized != 0) %>% 
-  mutate(month_year = as.Date(paste0(year(date), "-", month(date), "-01"))) %>%
-  filter(month_year >= start_date & month_year <= end_date)
-
-set.seed(123) 
-sampled_events <- filtered_df %>% 
-  sample_n(size = 10)
-
-sampled_events[c("notes", "unauthorized")]
+# 
+# end_date <- as.Date("2020-06-01")
+# start_date <- as.Date("2020-03-01")
+# 
+# filtered_df <- acled %>% 
+#   filter(unauthorized != 0) %>% 
+#   mutate(month_year = as.Date(paste0(year(date), "-", month(date), "-01"))) %>%
+#   filter(month_year >= start_date & month_year <= end_date)
+# 
+# set.seed(123) 
+# sampled_events <- filtered_df %>% 
+#   sample_n(size = 10)
+# 
+# sampled_events[c("notes", "unauthorized")]
 
 
 #### descriptive regressions ####
