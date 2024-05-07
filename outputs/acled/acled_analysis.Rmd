@@ -1,0 +1,139 @@
+---
+title: "Results Weighted"
+author: "Maksim Zubok"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output: 
+  pdf_document:
+    latex_engine: lualatex
+    toc: True
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      results='asis')
+
+
+pacman::p_load(rio, tidyverse, readr, broom, 
+               lubridate, gt, gtsummary, survey, readxl,
+               gridExtra, knitr, haven, stargazer)
+
+acled <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_deberta_preds_05_02_2024.csv") 
+
+
+## unique observations 
+
+length(unique(acled$notes))
+# Finding duplicate observations in 'variable'
+duplicates <- duplicated(acled$notes)
+
+# Getting the row IDs of these duplicates
+row_ids <- which(duplicates)
+
+# Print events
+acled$notes[row_ids]
+acled_clean <- acled[!duplicated(acled$notes), ]
+
+acled_clean <- acled_clean %>% 
+  mutate(
+    date = ymd(as.character(event_date)),
+    month_year = as.Date(paste0(month_year, "-01"))
+    )
+
+# Convert date column to Date object and create month-year object 
+acled_clean <- acled_clean %>% 
+  mutate(date = ymd(event_date),
+         month_year = format(date, "%Y-%m"))
+
+date_counts <- acled_clean %>%
+  group_by(date) %>%
+  summarise(protest_count = n())
+
+date_counts <- date_counts %>%
+  mutate(post_2022_02_24 = case_when(
+    date >= as.Date("2022-02-24") ~ 1,
+    TRUE ~ 0
+  ), year = year(date),    
+    month = month(date))
+
+all_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
+all_reg_yfe <- lm(protest_count ~ post_2022_02_24 +  factor(year), data = date_counts)
+all_reg_mfe <- lm(protest_count ~ post_2022_02_24 + factor(month), data = date_counts)
+all_reg_yfe_mfe <- lm(protest_count ~ post_2022_02_24 + factor(month) + factor(year), data = date_counts)
+
+
+
+date_counts_by_type <- acled_clean %>%
+  group_by(date, pred_labels) %>%
+  summarise(protest_count = n())%>%
+  mutate(
+    post_2022_02_24 = case_when(
+    date >= as.Date("2022-02-24") ~ 1,
+    TRUE ~ 0
+  ),
+    year = year(date),    
+    month = month(date)
+  )
+
+by_type_reg <- lm(protest_count ~ post_2022_02_24 + pred_labels, data = date_counts_by_type)
+by_type_reg_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + factor(month), data = date_counts_by_type)
+by_type_reg_yfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + factor(year), data = date_counts_by_type)
+by_type_reg_yfe_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + factor(month) + factor(year), data = date_counts_by_type)
+
+
+```
+
+
+# Overall Protest Counts 
+
+```{r}
+
+stargazer(all_reg, all_reg_mfe,
+          all_reg_yfe, all_reg_yfe_mfe,
+          digits=2,
+          header=FALSE,
+          no.space = TRUE, # to remove the spaces after each 
+          column.sep.width = "3pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          dep.var.labels=c("Daily Protest Count"),
+          covariate.labels=c("Post 24 February 2022"),
+          title="All Protests Combined",
+  omit = c("month", "year"),
+  add.lines = list(c('Month FE','No','Yes','No','Yes'),
+                           c('Year FE', 'No', 'No', 'Yes', 'Yes'))
+          )
+```
+\newpage
+# Protest Counts by Type
+```{r}
+stargazer(by_type_reg, by_type_reg_mfe, 
+          by_type_reg_yfe, by_type_reg_yfe_mfe, 
+          digits=2,
+          header=FALSE,
+          no.space = TRUE, # to remove the spaces after each 
+          column.sep.width = "3pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          dep.var.labels=c("Daily Protest Count"),
+          covariate.labels=c("Post 24 February 2022",
+                             "Economic",
+                             "Environmental",
+                             "Legal",
+                             "Political", 
+                             "Social",
+                             "Anti-War",
+                             "Pro-War"),
+
+          title="Protests By Type",
+          notes = 'Reference Category: Cultural Protest',
+  notes.append = TRUE,
+  notes.align = 'l',
+  omit = c("month", "year"),
+  add.lines = list(c('Month FE','No','Yes','No','Yes'),
+                           c('Year FE', 'No', 'No', 'Yes', 'Yes'))
+          )
+```
