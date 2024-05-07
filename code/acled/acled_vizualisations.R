@@ -414,19 +414,43 @@ ggsave("outputs/share_arrests_by_type_plot.png", plot = arrests_type_protests_pl
 
 #### descriptive regressions ####
 
-# Group data by 'date' and count observations
-# date_counts <- acled_clean %>%
-#   group_by(date) %>%
-#   summarise(protest_count = n())
-# 
-# date_counts <- date_counts %>%
-#   mutate(post_2022_02_24 = case_when(
-#     date >= as.Date("2022-02-24") ~ 1,
-#     TRUE ~ 0
-#   ))
-# 
-# all_protest_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
-# summary(all_protest_reg)
+date_counts <- acled_clean %>%
+  group_by(date) %>%
+  summarise(protest_count = n())
+
+date_counts <- date_counts %>%
+  mutate(post_2022_02_24 = case_when(
+    date >= as.Date("2022-02-24") ~ 1,
+    TRUE ~ 0
+  ))
+
+all_protest_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
+summary(all_protest_reg)
+
+
+date_counts_by_type <- acled_clean %>%
+  group_by(date, pred_labels) %>%
+  summarise(protest_count = n())%>%
+  mutate(
+    post_2022_02_24 = case_when(
+    date >= as.Date("2022-02-24") ~ 1,
+    TRUE ~ 0
+  ),
+    year = year(date),    
+    month = month(date)
+  )
+
+protest_by_type_reg <- lm(protest_count ~ post_2022_02_24 + pred_labels, data = date_counts_by_type)
+summary(protest_by_type_reg)
+
+protest_by_type_reg_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + month, data = date_counts_by_type)
+summary(protest_by_type_reg_mfe)
+
+protest_by_type_reg_yfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + year, data = date_counts_by_type)
+summary(protest_by_type_reg_yfe)
+
+protest_by_type_reg_yfe_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + month + year, data = date_counts_by_type)
+summary(protest_by_type_reg_yfe_mfe)
 
 #### checking (un)authorised ####
 # acled_subset_for_plot %>%
