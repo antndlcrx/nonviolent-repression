@@ -21,9 +21,15 @@ knitr::opts_chunk$set(echo = FALSE,
 
 pacman::p_load(rio, tidyverse, readr, broom, 
                lubridate, gt, gtsummary, survey, readxl,
-               gridExtra, knitr, haven, stargazer)
+               gridExtra, knitr, haven, stargazer, nnet)
 
-acled <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_deberta_preds_05_02_2024.csv") 
+DATA_CODES = "https://cdn.githubraw.com/antndlcrx/nonviolent-repression/main/data/acled_raw_data/region_codes.xlsx"
+
+acled <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_org_indicator.csv") 
+
+codes = data <- openxlsx::read.xlsx(DATA_CODES, sheet = "Sheet1")
+codes <- codes %>%
+  mutate(region_name_en = str_trim(region_name_en))
 
 
 ## unique observations 
@@ -45,95 +51,209 @@ acled_clean <- acled_clean %>%
     month_year = as.Date(paste0(month_year, "-01"))
     )
 
-# Convert date column to Date object and create month-year object 
+# Convert date column to Date object and create DVs:
+# pre/post invasion
+# election_month
 acled_clean <- acled_clean %>% 
   mutate(date = ymd(event_date),
-         month_year = format(date, "%Y-%m"))
-
-date_counts <- acled_clean %>%
-  group_by(date) %>%
-  summarise(protest_count = n())
-
-date_counts <- date_counts %>%
-  mutate(post_2022_02_24 = case_when(
+         pred_labels = recode(pred_labels,
+                              "war (pro)" = "war_pro",
+                              "war (anti)" = "war_anti"),
+         month_year = format(date, "%Y-%m"),
+         post_invasion = case_when(
     date >= as.Date("2022-02-24") ~ 1,
-    TRUE ~ 0
-  ), year = year(date),    
-    month = month(date))
-
-all_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
-all_reg_yfe <- lm(protest_count ~ post_2022_02_24 +  factor(year), data = date_counts)
-all_reg_mfe <- lm(protest_count ~ post_2022_02_24 + factor(month), data = date_counts)
-all_reg_yfe_mfe <- lm(protest_count ~ post_2022_02_24 + factor(month) + factor(year), data = date_counts)
-
-
-
-date_counts_by_type <- acled_clean %>%
-  group_by(date, pred_labels) %>%
-  summarise(protest_count = n())%>%
-  mutate(
-    post_2022_02_24 = case_when(
-    date >= as.Date("2022-02-24") ~ 1,
+    TRUE ~ 0),
+    police_violence = case_when(
+    sub_event_type %in% c("Protest with intervention", "Excessive force against protesters") ~ 1,
     TRUE ~ 0
   ),
-    year = year(date),    
-    month = month(date)
-  )
+    election_month = case_when(
+           month_year %in% c("2021-09", "2018-03", "2024-03", "2020-06", "2020-07") ~ 1,
+           TRUE ~ 0)
+    )
 
-by_type_reg <- lm(protest_count ~ post_2022_02_24 + pred_labels, data = date_counts_by_type)
-by_type_reg_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + factor(month), data = date_counts_by_type)
-by_type_reg_yfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + factor(year), data = date_counts_by_type)
-by_type_reg_yfe_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + factor(month) + factor(year), data = date_counts_by_type)
 
+mapping <- c(
+  'Saint Petersburg' = 'The City of Saint-Petersburg',
+  'Sverdlovsk' = 'Sverdlovsk region',
+  'Moscow' = 'The City of Moscow',
+  'Republic of Tatarstan' = 'Republic of Tatarstan',
+  'Novosibirsk' = 'Novosibirsk region',
+  'Novgorod' = 'Novgorod region',
+  'Samara' = 'Samara region',
+  'Republic of Mari El' = 'Republic of Mariy El',
+  'Republic of Dagestan' = 'Republic of Daghestan',
+  'Tomsk' = 'Tomsk region',
+  'Republic of Karachay-Cherkessia' = 'Karachaev-Circassian Republic',
+  'Moscow Oblast' = 'Moscow region',
+  'Volgograd' = 'Volgograd region',
+  'Chelyabinsk' = 'Chelyabinsk region',
+  'Kaliningrad' = 'Kaliningrad region',
+  'Khabarovsk' = 'Khabarovsk territory',
+  'Republic of Khakassia' = 'Republic of Khakassia',
+  'Perm' = 'Perm region',
+  'Vologda' = 'Vologda region',
+  'Republic of Sakha' = 'Republic of Sakha (Yakutia)',
+  'Tula' = 'Tula region',
+  'Kemerovo' = 'Kemerovo region',
+  'Altai' = 'Altai territory',
+  'Republic of Bashkortostan' = 'Republic of Bashkortastan',
+  'Penza' = 'Penza region',
+  'Republic of Chuvash' = 'Chuvash Republic',
+  'Krasnoyarsk' = 'Krasnoyarsk territory',
+  'Orenburg' = 'Orenburg region',
+  'Tyumen' = 'Tyumen region',
+  'Republic of Kabardino-Balkaria' = 'Kabardian-Balkar Republic',
+  'Kostroma' = 'Kostroma region',
+  'Vladimir' = 'Vladimir region',
+  'Arkhangelsk' = 'Arkhangelsk region',
+  'Rostov' = 'Rostov region',
+  'Krasnodar' = 'Krasnodar territory',
+  'Khanty-Mansi' = 'Khanty-Mansi autonomous',
+  'Kaluga' = 'Kaluga region',
+  'Republic of Karelia' = 'Republic of Karelia',
+  'Voronezh' = 'Voronezh region',
+  'Ryazan' = 'Ryazan region',
+  'Zabaykalskiy' = 'Chita region',
+  'Ulyanovsk' = 'Ulyanovsk region',
+  'Republic of Komi' = 'Republic of Komi',
+  'Republic of Buryatia' = 'Republic of Buryatia',
+  'Nizhny Novgorod' = 'Nizhny novgorod region',
+  'Ivanovo' = 'Ivanovo region',
+  'Saratov' = 'Saratov region',
+  'Irkutsk' = 'Irkutsk region',
+  'Republic of Altai' = 'Republic of Altai',
+  'Primorskiy' = 'Primorsky territory',
+  'Republic of Chechnya' = 'Chechen Republic',
+  'Belgorod' = 'Belgorod region',
+  'Lipetsk' = 'Lipetsk region',
+  'Udmurt Republic' = 'Udmurt Republic',
+  'Astrakhan' = 'Astrakhan region',
+  'Kirov' = 'Kirov region',
+  'Yaroslavl' = 'Yaroslavl region',
+  'Kursk' = 'Kursk region',
+  'Omsk' = 'Omsk region',
+  'Republic of Mordovia' = 'Republic of Mordovia',
+  'Tambov' = 'Tambov region',
+  'Smolensk' = 'Smolensk region',
+  'Republic of Ingushetia' = 'Republic of Ingushetia',
+  'Oryol' = 'Oryol region',
+  'Pskov' = 'Pskov region',
+  'Republic of Tuva' = 'Republic of Tyva',
+  'Republic of North Ossetia-Alania' = 'Republic of North Ossetia -Alania',
+  'Jewish Autonomous Oblast' = 'Jewish autonomous region',
+  'Kamchatka' = 'Kamchatka region',
+  'Magadan' = 'Magadan region',
+  'Republic of Kalmykia' = 'Republic of Kalmykia',
+  'Yamalo-Nenets' = 'Yamalo-Nenets autonomous',
+  'Bryansk' = 'Bryansk region',
+  'Stavropol' = 'Stavropol territory',
+  'Tver' = 'Tver region',
+  'Murmansk' = 'Murmansk region',
+  'Republic of Adygea' = 'Republic of Adygeya',
+  'Amur' = 'Amur region',
+  'Sakhalin' = 'Sakhalin region',
+  'Leningrad' = 'Leningrad region',
+  'Chukotka' = 'Chukotka autonomous area',
+  'Nenets' = 'Nenets autonomous area',
+  'Kurgan' = 'Kurgan region'
+)
+
+
+# apply mapping
+acled_clean$admin1 <- mapping[acled_clean$admin1]
+
+# create dummies for protest types
+acled_clean_dummy <- acled_clean %>%
+  mutate(pred_labels = factor(pred_labels)) %>%
+  mutate(dummy = 1) %>%
+  pivot_wider(names_from = pred_labels, values_from = dummy, values_fill = list(dummy = 0)) %>% 
+  mutate(non_pol = case_when(political == 1 ~ 0,
+                             TRUE ~ 1))
 
 ```
 
 
-# Overall Protest Counts 
 
 ```{r}
+# pol_base <- lm(political ~ post_invasion, acled_clean_dummy)
+pol_base <- glm(political ~ post_invasion  + month_year, data = acled_clean_dummy, family = binomial)
+nonpol_base <- glm(non_pol ~ post_invasion + month_year, data = acled_clean_dummy, family = binomial)
 
-stargazer(all_reg, all_reg_mfe,
-          all_reg_yfe, all_reg_yfe_mfe,
-          digits=2,
-          header=FALSE,
-          no.space = TRUE, # to remove the spaces after each 
-          column.sep.width = "3pt", # to reduce column width
-          font.size = "small", # to make font size smaller
-          dep.var.labels=c("Daily Protest Count"),
-          covariate.labels=c("Post 24 February 2022"),
-          title="All Protests Combined",
-  omit = c("month", "year"),
-  add.lines = list(c('Month FE','No','Yes','No','Yes'),
-                           c('Year FE', 'No', 'No', 'Yes', 'Yes'))
-          )
+pol_controls <- glm(political ~ post_invasion + election_month + month_year + admin1, data = acled_clean_dummy, family = binomial)
+nonpol_controls <- glm(non_pol ~ post_invasion + election_month + month_year + admin1, data = acled_clean_dummy, family = binomial)
+
+# summary(pol_base)
 ```
-\newpage
-# Protest Counts by Type
+
 ```{r}
-stargazer(by_type_reg, by_type_reg_mfe, 
-          by_type_reg_yfe, by_type_reg_yfe_mfe, 
+acled_clean_dummy_no_war <- acled_clean_dummy %>% 
+  mutate() %>% 
+  filter(!(war_pro == 1 | war_anti == 1))
+
+# nonpol_subset_nowar <- lm(non_pol ~ post_invasion, acled_clean_dummy_no_war)
+nonpol_nowar <- glm(non_pol ~ post_invasion + month_year, data = acled_clean_dummy_no_war, family = binomial)
+nonpol_nowar_controls <- glm(non_pol ~ post_invasion + election_month + month_year + admin1, data = acled_clean_dummy_no_war, family = binomial)
+
+# summary(nonpol_subset_nowar)
+
+```
+
+
+```{r}
+models = list(pol_base, pol_controls, 
+          nonpol_base, nonpol_controls, nonpol_nowar,
+          nonpol_nowar_controls)
+
+stargazer(models,
           digits=2,
           header=FALSE,
           no.space = TRUE, # to remove the spaces after each 
-          column.sep.width = "3pt", # to reduce column width
+          column.sep.width = "2pt", # to reduce column width
           font.size = "small", # to make font size smaller
-          dep.var.labels=c("Daily Protest Count"),
-          covariate.labels=c("Post 24 February 2022",
-                             "Economic",
-                             "Environmental",
-                             "Legal",
-                             "Political", 
-                             "Social",
-                             "Anti-War",
-                             "Pro-War"),
+          dep.var.labels=c("Political Protest", "Other Protest"),
+          covariate.labels=c("Post Invasion", "Election Month"),
 
-          title="Protests By Type",
-          notes = 'Reference Category: Cultural Protest',
+          title="Log Odds of Protest",
+          notes = '',
   notes.append = TRUE,
   notes.align = 'l',
-  omit = c("month", "year"),
-  add.lines = list(c('Month FE','No','Yes','No','Yes'),
-                           c('Year FE', 'No', 'No', 'Yes', 'Yes'))
+  omit = c("month", "year", "admin"),
+  add.lines = list(c('Month-Year FE','Yes','Yes','Yes', 'Yes', 'Yes', 'Yes'),
+                   c('War Protests Excluded', 'No', 'No', 'No', 'No', 'Yes', 'Yes'),
+                   c('Region FE', 'No', "Yes", "No", "Yes", "No", "Yes")
+                   )
           )
 ```
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, results=FALSE}
+m_log <- multinom(org_indicator ~ post_invasion + month_year, data = acled_clean_dummy)
+
+m_log_controls <- multinom(org_indicator ~  post_invasion + election_month + month_year + admin1, data = acled_clean_dummy)
+```
+
+
+```{r}
+stargazer(m_log, m_log_controls,
+          digits=2,
+          header=FALSE,
+          no.space = TRUE, # to remove the spaces after each 
+          column.sep.width = "2pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          dep.var.labels=c("Other", "Pro Kremlin", "Systemic Opposition", "Other", "Pro Kremlin", "Systemic Opposition"),
+          covariate.labels=c("Post Invasion", "Election Month"),
+
+          title="Log Odds of Protest by Protest Organiser",
+          notes = '',
+  notes.append = TRUE,
+  notes.align = 'l',
+  omit = c("month", "year", "admin"),
+  add.lines = list(c('Month-Year FE','Yes','Yes', 'Yes','Yes','Yes','Yes'),
+                   c('War Protests Excluded', 'No', 'No','No', 'No','No', 'No'),
+                   c('Region FE', 'No','No', 'No', "Yes", 'Yes','Yes')
+                   )
+          )
+
+```
+
