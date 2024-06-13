@@ -4,6 +4,9 @@ author: "Maksim Zubok"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 header-includes:
 - \usepackage{pdflscape}
+- \usepackage{geometry}
+- \usepackage{longtable}
+- \geometry{a4paper, margin=1in}
 - \newcommand{\blandscape}{\begin{landscape}}
 - \newcommand{\elandscape}{\end{landscape}}
 output: 
@@ -21,7 +24,7 @@ knitr::opts_chunk$set(echo = FALSE,
 
 pacman::p_load(rio, tidyverse, readr, broom, 
                lubridate, gt, gtsummary, survey, readxl,
-               gridExtra, knitr, haven, stargazer, nnet)
+               gridExtra, knitr, haven, stargazer, nnet, ggeffects)
 
 DATA_CODES = "https://cdn.githubraw.com/antndlcrx/nonviolent-repression/main/data/acled_raw_data/region_codes.xlsx"
 
@@ -60,16 +63,16 @@ acled_clean <- acled_clean %>%
                               "war (pro)" = "war_pro",
                               "war (anti)" = "war_anti"),
          month_year = format(date, "%Y-%m"),
-         post_invasion = case_when(
+         post_invasion = factor(case_when(
     date >= as.Date("2022-02-24") ~ 1,
-    TRUE ~ 0),
-    police_violence = case_when(
+    TRUE ~ 0)),
+    police_violence = factor(case_when(
     sub_event_type %in% c("Protest with intervention", "Excessive force against protesters") ~ 1,
     TRUE ~ 0
-  ),
-    election_month = case_when(
+  )),
+    election_month = factor(case_when(
            month_year %in% c("2021-09", "2018-03", "2024-03", "2020-06", "2020-07") ~ 1,
-           TRUE ~ 0)
+           TRUE ~ 0))
     )
 
 
@@ -168,14 +171,17 @@ acled_clean_dummy <- acled_clean %>%
   mutate(pred_labels = factor(pred_labels)) %>%
   mutate(dummy = 1) %>%
   pivot_wider(names_from = pred_labels, values_from = dummy, values_fill = list(dummy = 0)) %>% 
-  mutate(non_pol = case_when(political == 1 ~ 0,
-                             TRUE ~ 1))
+  mutate(non_pol = factor(case_when(political == 1 ~ 0,
+                             TRUE ~ 1)))
 
 ```
 
 
 
-```{r}
+```{r base regressions}
+#### Political and Other protests with controls ####
+
+
 # pol_base <- lm(political ~ post_invasion, acled_clean_dummy)
 pol_base <- glm(political ~ post_invasion  + month_year, data = acled_clean_dummy, family = binomial)
 nonpol_base <- glm(non_pol ~ post_invasion + month_year, data = acled_clean_dummy, family = binomial)
@@ -186,7 +192,10 @@ nonpol_controls <- glm(non_pol ~ post_invasion + election_month + month_year + a
 # summary(pol_base)
 ```
 
-```{r}
+```{r base excl war protest}
+
+#### Other protests with controls excluded war protests ####
+
 acled_clean_dummy_no_war <- acled_clean_dummy %>% 
   mutate() %>% 
   filter(!(war_pro == 1 | war_anti == 1))
@@ -199,8 +208,9 @@ nonpol_nowar_controls <- glm(non_pol ~ post_invasion + election_month + month_ye
 
 ```
 
+# Protest Log Odds with and without War Protest
 
-```{r}
+```{r create reg table one}
 models = list(pol_base, pol_controls, 
           nonpol_base, nonpol_controls, nonpol_nowar,
           nonpol_nowar_controls)
@@ -218,7 +228,7 @@ stargazer(models,
           notes = '',
   notes.append = TRUE,
   notes.align = 'l',
-  omit = c("month", "year", "admin"),
+  omit = c("year", "admin"),
   add.lines = list(c('Month-Year FE','Yes','Yes','Yes', 'Yes', 'Yes', 'Yes'),
                    c('War Protests Excluded', 'No', 'No', 'No', 'No', 'Yes', 'Yes'),
                    c('Region FE', 'No', "Yes", "No", "Yes", "No", "Yes")
@@ -227,14 +237,52 @@ stargazer(models,
 ```
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, results=FALSE}
+```{r multinom reg, echo = FALSE, warning = FALSE, message = FALSE, results=FALSE}
+
+#### Protest Organised by Kreml/Syst/Other actors ####
+
 m_log <- multinom(org_indicator ~ post_invasion + month_year, data = acled_clean_dummy)
 
 m_log_controls <- multinom(org_indicator ~  post_invasion + election_month + month_year + admin1, data = acled_clean_dummy)
 ```
 
 
-```{r}
+\newpage
+# Protest by Organiser
+
+
+In the table below, we depict how the invasion has affected the propensity of different actors to organise a protest. We distinguish three actor categories: pro-Kremlin actors, systemic opposition actors, and other actors.
+
+\begin{center}
+\begin{longtable}{|p{0.5\textwidth}|p{0.5\textwidth}|}
+\hline
+\textbf{Pro-Kremlin} & \textbf{Systemic Opposition} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Pro-Kremlin} & \textbf{Systemic Opposition} \\
+\hline
+\endhead
+ER: United Russia & CP: A Just Russia \\
+Former Government of Russia (2000-) & KPRF: Communist Party of the Russian Federation \\
+Former Military Forces of Russia (2000-) & KR: Communists of Russia \\
+Former Police Forces of Russia (2000-) & LDPR: Liberal Democratic Party of Russia \\
+Government of Russia (2000-) Republic of Chechnya & New People \\
+Military Forces of Russia (2000-) & PR: Party of Growth \\
+Military Forces of Russia (2000-) National Guard - Special Purpose Police Unit & Yabloko: Russian United Democratic Party \\
+Motherland Party & \\
+NOD: National Liberation Movement & \\
+NPSR: National Patriotic Forces of Russia & \\
+NPSR: People's Patriotic Union of Russia & \\
+Police Forces of Russia (2000-) & \\
+VVPOD: Young Army Cadets National Movement & \\
+Zakhar Prilepin's Guard & \\
+\hline
+\end{longtable}
+\end{center}
+
+
+```{r create reg table two}
 stargazer(m_log, m_log_controls,
           digits=2,
           header=FALSE,
@@ -248,12 +296,75 @@ stargazer(m_log, m_log_controls,
           notes = '',
   notes.append = TRUE,
   notes.align = 'l',
-  omit = c("month", "year", "admin"),
+  omit = c("year", "admin"),
   add.lines = list(c('Month-Year FE','Yes','Yes', 'Yes','Yes','Yes','Yes'),
                    c('War Protests Excluded', 'No', 'No','No', 'No','No', 'No'),
                    c('Region FE', 'No','No', 'No', "Yes", 'Yes','Yes')
                    )
           )
 
+```
+
+\newpage
+
+# Protest met with Violence
+
+Next, we look at protests that were met with police violence. To identify them, we rely on acled classification of protest event subtype and define events which acled labeled as "Protest with intervention" or "Excessive force against protesters" as protests met with police violence. 
+
+Protest type variable here is coded 1 for "non-political" and 0 for "political".
+
+```{r regs on repression}
+
+# pol_base <- lm(political ~ post_invasion, acled_clean_dummy)
+# violnce_base <- glm(police_violence ~ political + month_year, data = acled_clean_dummy, family = binomial)
+# violnce_controls <- glm(police_violence ~ political + election_month + month_year + admin1, data = acled_clean_dummy, family = binomial)
+
+
+nonpol_violnce_base <- glm(police_violence ~ non_pol + month_year, data = acled_clean_dummy, family = binomial)
+
+nonpol_violnce_controls <- glm(police_violence ~ non_pol + election_month + month_year + admin1, data = acled_clean_dummy, family = binomial)
+
+nonpol_violnce_controls_war <- glm(police_violence ~ non_pol + election_month + post_invasion + month_year + admin1, data = acled_clean_dummy, family = binomial)
+
+nonpol_violnce_controls_int <- glm(police_violence ~ non_pol + election_month + non_pol* post_invasion + month_year + admin1, data = acled_clean_dummy, family = binomial)
+
+
+```
+
+
+
+```{r reg table violence}
+models_violence = list(nonpol_violnce_base, 
+          nonpol_violnce_controls, nonpol_violnce_controls_war, nonpol_violnce_controls_int)
+
+stargazer(models_violence,
+          digits=2,
+          header=FALSE,
+          no.space = TRUE, # to remove the spaces after each 
+          column.sep.width = "2pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          dep.var.labels=c("Protest Met with Violence"),
+          covariate.labels=c("Protest Type",  "Election Month", "Post Invasion",
+                             "Post Invasion * Protest Type"),
+
+          title="Log Odds of Protest met with Police Violence",
+          notes = '',
+  notes.append = TRUE,
+  notes.align = 'l',
+  omit = c("year", "admin"),
+  add.lines = list(c('Month-Year FE','Yes','Yes','Yes', 'Yes'),
+                   c('War Protests Excluded', 'No', 'No', 'No', 'No'),
+                   c('Region FE', "No", "Yes", "Yes", "Yes")
+                   )
+          )
+
+
+```
+
+\newpage
+The figure below depicts the 
+
+```{r}
+ggpredict(nonpol_violnce_controls_int, c("post_invasion", "non_pol")) %>% plot()
 ```
 
