@@ -236,6 +236,29 @@ stargazer(models,
           )
 ```
 
+```{r}
+
+# loop up what is happening
+
+acled_clean_dummy %>% group_by(org_indicator) %>% summarise(n())
+
+
+acled_clean_dummy <- acled_clean_dummy %>% 
+  mutate(org_indicator = relevel(factor(org_indicator), ref = "other"))
+
+
+levels(acled_clean_dummy$org_indicator)
+```
+
+
+```{r}
+
+
+
+
+
+```
+
 
 ```{r multinom reg, echo = FALSE, warning = FALSE, message = FALSE, results=FALSE}
 
@@ -244,6 +267,8 @@ stargazer(models,
 m_log <- multinom(org_indicator ~ post_invasion + month_year, data = acled_clean_dummy)
 
 m_log_controls <- multinom(org_indicator ~  post_invasion + election_month + month_year + admin1, data = acled_clean_dummy)
+
+summary(m_log)
 ```
 
 
