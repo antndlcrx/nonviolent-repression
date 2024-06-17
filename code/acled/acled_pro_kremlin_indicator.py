@@ -30,28 +30,44 @@ pro_kremlin = [
   'NOD: National Liberation Movement',
   'NPSR: National Patriotic Forces of Russia',
   "NPSR: People's Patriotic Union of Russia",
-  'New People',
   'Police Forces of Russia (2000-)',
   'VVPOD: Young Army Cadets National Movement',
   "Zakhar Prilepin's Guard"
 ]
 
-# Function to check if any sub-value is in pro_kremlin
-def check_pro_kremlin(value):
-  """
-  input: str
-  output: int {0, 1}
+syst_opposition = [
+    'CP: A Just Russia',
+    'KPRF: Communist Party of the Russian Federation',
+    'KR: Communists of Russia',
+    'LDPR: Liberal Democratic Party of Russia',
+    'New People',
+    'PR: Party of Growth',
+    'Yabloko: Russian United Democratic Party'
 
-  example: 'Government of Russia (2000-); Labour Group (Russia)' ->
+]
+# Function to check if any sub-value is in pro_kremlin
+"""
+    input: str
+    output: int {0, 1, 2}
+
+    example: 'Government of Russia (2000-); Labour Group (Russia)' ->
               ['Government of Russia (2000-)', 'Labour Group (Russia)'] ->
                 1
-  """
-  if pd.isna(value):
-        return 0
-  return int(any(actor in pro_kremlin for actor in str(value).split('; ')))
+    """
+    if pd.isna(value):
+        return pd.NA
+
+    actors = str(value).split('; ')
+
+    if any(actor in pro_kremlin for actor in actors):
+        return "pro_kremlin"
+    elif any(actor in syst_opposition for actor in actors):
+        return "syst_opposition"
+    else:
+        return "other"
 
 # Apply the function to each row in the 'assoc_actor_1' column
-acled['pro_kremlin_indicator'] = acled['assoc_actor_1'].apply(check_pro_kremlin)
+acled['org_indicator'] = acled['assoc_actor_1'].apply(check_pro_kremlin)
 
 # write csv file
-acled.to_csv("data/processed_data/acled_protest_krml_indicator.csv", index=False)
+acled.to_csv("data/processed_data/acled_with_org_indicator.csv", index=False)
