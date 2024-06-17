@@ -9,12 +9,14 @@ from sklearn.preprocessing import LabelEncoder
 from datasets import Dataset
 import numpy as np
 import torch
+storage_options = {'User-Agent': 'Mozilla/5.0'}
 
 # save path for gdrive
 model_save_path = '/content/drive/MyDrive/non_violent_repressions/models'
 tokenizer_save_path = '/content/drive/MyDrive/non_violent_repressions/models'
 
-acled = pd.read_csv("/data/processed_data/acled_merged_18_23_edited_MT.csv")
+acled = pd.read_csv("https://cdn.githubraw.com/antndlcrx/nonviolent-repression/main/data/acled_processed_data/acled_merged_18_23_edited_MT.csv",
+                    storage_options=storage_options)
 
 # Convert 'event_date' to datetime format
 acled['event_date'] = pd.to_datetime(acled['event_date'], format='%d %B %Y')
@@ -38,7 +40,8 @@ tokenizer = DebertaTokenizer.from_pretrained('microsoft/deberta-base')
 
 # Tokenizing function
 def tokenize_function(examples):
-    return tokenizer(examples['notes'], padding="max_length", truncation=True)
+    return tokenizer(examples['notes'], padding="max_length", truncation=True,
+                     max_length=max_length)
 
 # Convert DataFrames to Dataset objects
 train_dataset = Dataset.from_pandas(train)
@@ -51,16 +54,18 @@ val_dataset = val_dataset.map(tokenize_function, batched=True)
 test_dataset = test_dataset.map(tokenize_function, batched=True)
 
 # Initialize model
-model = DebertaForSequenceClassification.from_pretrained('microsoft/deberta-base', num_labels=len(np.unique(acled_labels['labels'])))
-
-# 
+def model_init():
+    return DebertaForSequenceClassification.from_pretrained('microsoft/deberta-base', num_labels=len(np.unique(acled_labels['labels'])))
+ 
 training_args = TrainingArguments(
     output_dir='./results',
     num_train_epochs=3,
     per_device_train_batch_size=8,
     per_device_eval_batch_size=8,
+    learning_rate = 5e-05,
     warmup_steps=500,
     weight_decay=0.01,
+    seed = 42,
     logging_dir='./logs',
     logging_steps=10,
     evaluation_strategy="steps",  # Evaluate every `eval_steps` steps
@@ -70,26 +75,21 @@ training_args = TrainingArguments(
     load_best_model_at_end=True,  # Load the best model at the end of training
 )
 
-# Evaluate the model
-trainer.evaluate(test_dataset)
-
-
-# Initialize Trainer
+# Tuning
 trainer = Trainer(
-    model=model,
+    model_init=model_init,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
 )
 
-
-# Train the model
 trainer.train()
 
+trainer.evaluate(test_dataset)
 
 
 # Save the model
-model.save_pretrained(model_save_path)
+trainer.save_model(model_save_path)
 
 # Save the tokenizer associated with the model
 tokenizer.save_pretrained(tokenizer_save_path)
@@ -106,14 +106,18 @@ precision, recall, f1, _ = precision_recall_fscore_support(true_labels, pred_lab
 precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(true_labels, pred_labels, average='micro')
 precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(true_labels, pred_labels, average='macro')
 
-# Print per-label metrics
+# Convert metrics to DataFrame
 label_names = label_encoder.inverse_transform(np.unique(true_labels))  # Assuming label_encoder is your LabelEncoder instance
-for label, p, r, f in zip(label_names, precision, recall, f1):
-    print(f"Label: {label} - Precision: {p}, Recall: {r}, F1: {f}")
+metrics_df = pd.DataFrame({
+    'Label': np.append(label_names, ['Overall (Micro Avg)', 'Overall (Macro Avg)']),
+    'Precision': np.append(np.round(precision, 2), [round(precision_micro, 2), round(precision_macro, 2)]),
+    'Recall': np.append(np.round(recall, 2), [round(recall_micro, 2), round(recall_macro, 2)]),
+    'F1-Score': np.append(np.round(f1, 2), [round(f1_micro, 2), round(f1_macro, 2)])
+})
 
-# Print overall metrics
-print(f"Overall (Micro Avg) - Precision: {precision_micro}, Recall: {recall_micro}, F1: {f1_micro}")
-print(f"Overall (Macro Avg) - Precision: {precision_macro}, Recall: {recall_macro}, F1: {f1_macro}")
+# Generate LaTeX table
+latex_table = metrics_df.to_latex(index=False, float_format="%.2f", column_format="lccc", caption="Precision, Recall, and F1-Score for each label", label="tab:metrics", header=True, escape=False, bold_rows=True)
+print(latex_table)
 
 ##### inferece ### 
 # Load the tokenizer
@@ -143,4 +147,4 @@ for i in range(0, len(acled['notes']), batch_size):
         predicted_labels.extend(batch_labels)
         
 acled['pred_labels'] = predicted_labels
-acled.to_csv('/content/drive/MyDrive/non_violent_repressions/data/acled_with_preds_05_02.csv')
+# acled.to_csv('/content/drive/MyDrive/non_violent_repressions/data/acled_with_preds_17_06.csv')
