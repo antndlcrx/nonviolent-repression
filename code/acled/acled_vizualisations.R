@@ -2,7 +2,7 @@
 
 pacman::p_load(tidyverse, rio, ggplot2, lubridate)
 
-acled <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_with_dvs_and_controls_18_06_2024.csv") 
+acled <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_18_06_2024.csv") 
 
 
 # # Convert date column to Date object and create month-year object 

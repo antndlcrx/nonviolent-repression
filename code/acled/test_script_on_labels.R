@@ -6,7 +6,7 @@ pacman::p_load(rio, tidyverse, readr, broom,
 acled1 <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_org_indicator.csv")
 acled2 <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_deberta_preds_05_02_2024.csv")
 acled3 <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_deberta_preds_17_06_2024.csv")
-acled_final <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_with_dvs_and_controls_18_06_2024.csv")
+acled_final <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_18_06_2024.csv")
 
 
 acled1 <- acled1 %>% mutate(
