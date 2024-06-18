@@ -1,5 +1,7 @@
-# !pip install accelerate -U
-# !pip install datasets
+# pip install accelerate==0.31.0
+# pip install transformers==4.41.2
+# pip install datasets==2.20.0
+# pip install torch==2.3.0+cu121
 
 import pandas as pd
 from sklearn.metrics import precision_recall_fscore_support
@@ -37,6 +39,7 @@ train, val = train_test_split(train_val, test_size=0.25, stratify=train_val['yea
 
 # Initialize tokenizer
 tokenizer = DebertaTokenizer.from_pretrained('microsoft/deberta-base')
+max_length = 186 # longest tokenized example in ACLED data
 
 # Tokenizing function
 def tokenize_function(examples):
@@ -53,9 +56,12 @@ train_dataset = train_dataset.map(tokenize_function, batched=True)
 val_dataset = val_dataset.map(tokenize_function, batched=True)
 test_dataset = test_dataset.map(tokenize_function, batched=True)
 
+NUM_LABELS=len(np.unique(acled_labels['labels']))
 # Initialize model
-def model_init():
-    return DebertaForSequenceClassification.from_pretrained('microsoft/deberta-base', num_labels=len(np.unique(acled_labels['labels'])))
+def model_init(seed):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    return DebertaForSequenceClassification.from_pretrained('microsoft/deberta-base', num_labels=NUM_LABELS)
  
 training_args = TrainingArguments(
     output_dir='./results',
@@ -65,7 +71,7 @@ training_args = TrainingArguments(
     learning_rate = 5e-05,
     warmup_steps=500,
     weight_decay=0.01,
-    seed = 42,
+    # seed = 42,
     logging_dir='./logs',
     logging_steps=10,
     evaluation_strategy="steps",  # Evaluate every `eval_steps` steps
@@ -76,35 +82,36 @@ training_args = TrainingArguments(
 )
 
 # Tuning
-trainer = Trainer(
-    model_init=model_init,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=val_dataset,
-)
+seeds = [42, 52, 62]
+trainers = []
 
-trainer.train()
+for seed in seeds:
+    trainer = Trainer(
+        model_init=lambda: model_init(seed),
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
+    )
+    trainer.train()
+    trainers.append(trainer)
 
-trainer.evaluate(test_dataset)
+def ensemble_predict(trainers, dataset):
+    all_predictions = []
 
+    for trainer in trainers:
+        predictions = trainer.predict(dataset)
+        all_predictions.append(predictions.predictions)
 
-# Save the model
-trainer.save_model(model_save_path)
+    avg_predictions = np.mean(all_predictions, axis=0)
+    return np.argmax(avg_predictions, axis=1), predictions.label_ids
 
-# Save the tokenizer associated with the model
-tokenizer.save_pretrained(tokenizer_save_path)
+# Evaluate on the test dataset
+ensemble_pred_labels, true_labels = ensemble_predict(trainers, test_dataset)
 
-# Predict on the test dataset
-predictions = trainer.predict(test_dataset)
-pred_labels = np.argmax(predictions.predictions, axis=1)
-true_labels = predictions.label_ids
+precision, recall, f1, _ = precision_recall_fscore_support(true_labels, ensemble_pred_labels, average=None, labels=np.unique(true_labels))
 
-# Calculate precision, recall, and F1-score for each label
-precision, recall, f1, _ = precision_recall_fscore_support(true_labels, pred_labels, average=None, labels=np.unique(true_labels))
-
-# Calculate micro and macro averages for overall metrics
-precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(true_labels, pred_labels, average='micro')
-precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(true_labels, pred_labels, average='macro')
+precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(true_labels, ensemble_pred_labels, average='micro')
+precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(true_labels, ensemble_pred_labels, average='macro')
 
 # Convert metrics to DataFrame
 label_names = label_encoder.inverse_transform(np.unique(true_labels))  # Assuming label_encoder is your LabelEncoder instance
@@ -115,36 +122,53 @@ metrics_df = pd.DataFrame({
     'F1-Score': np.append(np.round(f1, 2), [round(f1_micro, 2), round(f1_macro, 2)])
 })
 
-# Generate LaTeX table
 latex_table = metrics_df.to_latex(index=False, float_format="%.2f", column_format="lccc", caption="Precision, Recall, and F1-Score for each label", label="tab:metrics", header=True, escape=False, bold_rows=True)
 print(latex_table)
 
+# save models
+for i, trainer in enumerate(trainers):
+    model_save_path = os.path.join(model_save_base_path, f'model_{i}')
+    trainer.save_model(model_save_path)
+
+tokenizer.save_pretrained(tokenizer_save_path)
+
 ##### inferece ### 
-# Load the tokenizer
+# Load the tokenizer and models
 tokenizer = DebertaTokenizer.from_pretrained(tokenizer_save_path)
 
-# Load the model
-model = DebertaForSequenceClassification.from_pretrained(model_save_path)
-
-# Tokenize all texts in the dataset
 tokenized_notes = tokenizer(list(acled['notes']), padding=True, truncation=True, return_tensors="pt")
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
 
-# Reduce batch size for tokenization and prediction
-batch_size = 16  # Adjust based on your GPU's memory capacity
+models = []
+for i in range(len(seeds)):
+    model_path = os.path.join(model_save_base_path, f'model_{i}')
+    model = DebertaForSequenceClassification.from_pretrained(model_path)
+    model.to(device)
+    models.append(model)
 
+batch_size = 16
+
+# use models for inference
 predicted_labels = []
+
 for i in range(0, len(acled['notes']), batch_size):
     batch_notes = list(acled['notes'][i:i+batch_size])
-    tokenized_notes = tokenizer(batch_notes, padding=True, truncation=True, return_tensors="pt")
+    tokenized_notes = tokenizer(batch_notes, padding=True, truncation=True, return_tensors="pt", max_length=max_length)
     inputs = {key: value.to(device) for key, value in tokenized_notes.items()}
-    with torch.no_grad():
-        outputs = model(**inputs)
-        batch_predictions = torch.argmax(outputs.logits, dim=-1)
-        batch_labels = [label_encoder.inverse_transform([label.item()])[0] for label in batch_predictions]
-        predicted_labels.extend(batch_labels)
+
+    all_batch_predictions = []
+
+    for model in models:
+        model.eval()
+        with torch.no_grad():
+            outputs = model(**inputs)
+            all_batch_predictions.append(outputs.logits.cpu().numpy())
+
+    avg_predictions = np.mean(all_batch_predictions, axis=0)
+    batch_predictions = np.argmax(avg_predictions, axis=-1)
+
+    batch_labels = [label_encoder.inverse_transform([label])[0] for label in batch_predictions]
+    predicted_labels.extend(batch_labels)
         
 acled['pred_labels'] = predicted_labels
 # acled.to_csv('/content/drive/MyDrive/non_violent_repressions/data/acled_with_preds_17_06.csv')
