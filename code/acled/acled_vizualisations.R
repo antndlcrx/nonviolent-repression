@@ -2,32 +2,13 @@
 
 pacman::p_load(tidyverse, rio, ggplot2, lubridate)
 
-acled <- import("data/acled_processed_data/acled_deberta_preds_05_02_2024.csv") 
+acled <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_with_dvs_and_controls.csv") 
 
 
-## unique observations 
-
-length(unique(acled$notes))
-# Finding duplicate observations in 'variable'
-duplicates <- duplicated(acled$notes)
-
-# Getting the row IDs of these duplicates
-row_ids <- which(duplicates)
-
-# Print events
-acled$notes[row_ids]
-acled_clean <- acled[!duplicated(acled$notes), ]
-
-acled_clean <- acled_clean %>% 
-  mutate(
-    date = ymd(as.character(event_date)),
-    month_year = as.Date(paste0(month_year, "-01"))
-    )
-
-# Convert date column to Date object and create month-year object 
-acled_clean <- acled_clean %>% 
-  mutate(date = ymd(event_date),
-         month_year = format(date, "%Y-%m"))
+# # Convert date column to Date object and create month-year object 
+# acled_clean <- acled_clean %>% 
+#   mutate(date = ymd(event_date),
+#          month_year = format(date, "%Y-%m"))
 
 # # create a subset from Jul 2021 to end Dec 2022
 # acled_subset <- acled %>% 
@@ -41,7 +22,7 @@ acled_clean <- acled_clean %>%
 # Save as Excel
 # write.xlsx(acled_subset, "acled_preprocessed_jul21_dec22.xlsx", rowNames = FALSE)
 
-acled_subset_for_plot <- acled_clean %>% 
+acled_subset_for_plot <- acled %>% 
   filter(date >= '2021-01-01')%>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(week = ceiling_date(date, unit = "week")) 
@@ -410,54 +391,6 @@ ggsave("outputs/share_arrests_by_type_plot.png", plot = arrests_type_protests_pl
 #   sample_n(size = 10)
 # 
 # sampled_events[c("notes", "unauthorized")]
-
-
-#### descriptive regressions ####
-
-date_counts <- acled_clean %>%
-  group_by(date) %>%
-  summarise(protest_count = n())
-
-date_counts <- date_counts %>%
-  mutate(post_2022_02_24 = case_when(
-    date >= as.Date("2022-02-24") ~ 1,
-    TRUE ~ 0
-  ))
-
-all_protest_reg <- lm(protest_count ~ post_2022_02_24, data = date_counts)
-summary(all_protest_reg)
-
-
-date_counts_by_type <- acled_clean %>%
-  group_by(date, pred_labels) %>%
-  summarise(protest_count = n())%>%
-  mutate(
-    post_2022_02_24 = case_when(
-    date >= as.Date("2022-02-24") ~ 1,
-    TRUE ~ 0
-  ),
-    year = year(date),    
-    month = month(date)
-  )
-
-protest_by_type_reg <- lm(protest_count ~ post_2022_02_24 + pred_labels, data = date_counts_by_type)
-summary(protest_by_type_reg)
-
-protest_by_type_reg_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + month, data = date_counts_by_type)
-summary(protest_by_type_reg_mfe)
-
-protest_by_type_reg_yfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + year, data = date_counts_by_type)
-summary(protest_by_type_reg_yfe)
-
-protest_by_type_reg_yfe_mfe <- lm(protest_count ~ post_2022_02_24 + pred_labels + month + year, data = date_counts_by_type)
-summary(protest_by_type_reg_yfe_mfe)
-
-#### checking (un)authorised ####
-# acled_subset_for_plot %>%
-#   filter(authorized == 0 & unauthorized == 0) %>%
-#   summarize(count = n())
-
-
 
 #### session info ####
 

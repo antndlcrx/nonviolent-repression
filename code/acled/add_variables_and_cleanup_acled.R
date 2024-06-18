@@ -30,12 +30,6 @@ row_ids <- which(duplicates)
 acled$notes[row_ids]
 acled_clean <- acled[!duplicated(acled$notes), ]
 
-acled_clean <- acled_clean %>% 
-  mutate(
-    date = ymd(as.character(event_date)),
-    month_year = as.Date(paste0(month_year, "-01"))
-  )
-
 # Convert date column to Date object and create DVs:
 # pre/post invasion
 # election_month
