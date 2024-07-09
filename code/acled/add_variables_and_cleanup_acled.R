@@ -28,7 +28,7 @@ row_ids <- which(duplicates)
 
 # Print events
 acled$notes[row_ids]
-acled_clean <- acled[!duplicated(acled$notes), ]
+acled_clean <- acled[!duplicated(acled$event_id_cnty), ]
 
 # Convert date column to Date object and create DVs:
 # pre/post invasion
@@ -145,4 +145,5 @@ acled_clean$federal_subject <- mapping[acled_clean$admin1]
 acled_clean <- acled_clean %>%
   left_join(codes, by = c("federal_subject" = "region_name_en"))
 
-write_csv(acled_clean, "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_18_06_2024.csv")
+# write_csv(acled_clean, "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_09_07_2024.csv")
+write_excel_csv(acled_clean, "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_09_07_2024_utf8byte.csv")

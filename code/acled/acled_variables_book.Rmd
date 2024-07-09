@@ -20,9 +20,9 @@ The report below refers to variables for the [ACLED dataset with custom variable
 
 # Hand-Coded Labels
 
-- `topic_manual` refers to protest topics assigned manually. There are `r sum(!is.na(acled$topic_manual))`. These labels we use as ground-truth labels to train a supervised classifier with which we get the `pred_labels` variable. To label `topic_manual`, we took 100 random observations from 2018, 2019, and 2023 and combined them with previously coded 2020, 2021, and 2022 (which have 1237, 1570, and 1303 observations respectively)
-- `pro_regime` refers to whether a protest event is pro or anti regime. This is also a manually coded variable. As of the point of the report, it is not used to train any classifiers. Observations are coded for 2018, 2019, 2020, and 2023 years.
-- `war_related` is a manually created variable that captures if a protest is related to the 2022 invasion of Ukraine or not. As of the point of the report, it is not used to train any classifiers.
+- `topic_manual` refers to protest topics assigned manually. There are `r sum(!is.na(acled$topic_manual))`. These labels we use as ground-truth labels to train a supervised classifier with which we get the `pred_labels` variable. To label `topic_manual`, we took 100 random observations from 2018, 2019, and 2023 and combined them with previously coded 2020, 2021, and 2022 (which have 1237, 1570, and 1303 observations respectively).
+- `pro_regime` (NOT USED) refers to whether a protest event is pro or anti regime. This is also a manually coded variable. As of the point of the report, it is not used to train any classifiers. Observations are coded for 2018, 2019, 2020, and 2023 years.
+- `war_related` (NOT USED) is a manually created variable that captures if a protest is related to the 2022 invasion of Ukraine or not. As of the point of the report, it is not used to train any classifiers.
 
 # Automated Labels
 
@@ -39,10 +39,12 @@ The report below refers to variables for the [ACLED dataset with custom variable
   - 'NOD: National Liberation Movement'
   - 'NPSR: National Patriotic Forces of Russia'
   - "NPSR: People's Patriotic Union of Russia"
-  - 'New People'
   - 'Police Forces of Russia (2000-)'
   - 'VVPOD: Young Army Cadets National Movement'
   - "Zakhar Prilepin's Guard"
+  
+Systemic opposition: 
+
 
 - 'authorized' is a count variable that captures if (and how many times) the following keywords are used in the `notes` variable. The variabe aims to proxy if an event was **authorised**. [Code](https://github.com/antndlcrx/nonviolent-repression/blob/main/code/acled/acled_protest_auth_elections.R) to create the variable is here (section: "(un)authorised indicator").
   - "was authorized"
