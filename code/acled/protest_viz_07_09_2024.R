@@ -3,7 +3,7 @@
 # monthly pro-gov over time, everything else the other line 
 # 
 # vertical lines elections and war and mobilization 
-
+##### set up #####
 pacman::p_load(tidyverse, rio, ggplot2, lubridate)
 
 
@@ -11,6 +11,81 @@ ACLED_DATA <- "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_
 
 # acled_more <- read_xlsx(ACLED_DATA)
 acled <- read_csv(ACLED_DATA)
+
+acled1 = acled %>% 
+  mutate(crowd_size = str_remove(tags, "crowd size=")) %>% 
+  mutate(crowd_size = case_when(crowd_size == "no report" ~ NA,
+                                TRUE ~ crowd_size))
+
+#### protest features ####
+
+## crowd size ##
+
+sum(is.na(acled1$crowd_size)) # 1053, 3708 with "no report"
+
+
+acled1 %>% group_by(post_invasion) %>% 
+  summarise(sum(is.na(crowd_size)))
+
+# A tibble: 2 × 2
+# post_invasion `sum(is.na(crowd_size))`
+# <dbl>                    <int>
+#          0                     1053
+#          1                        0
+
+## with no report included with NA
+# # A tibble: 2 × 2
+# post_invasion `sum(is.na(crowd_size))`
+# <dbl>                    <int>
+#          0                     2762
+#          1                      946
+
+unique(acled1$crowd_size) # 671 unique entities
+# between 300-3000
+# "between several hundred and 1100" 
+# several dozen people
+# "no report; women targeted: girls"              
+# "38 cars" 
+# "over 1 000 000" 
+
+## missingness ##
+
+acled_subset_for_plot <- acled1 %>% 
+  filter(date >= '2021-01-01') %>%
+  mutate(month = floor_date(date, unit = "month"))
+
+# Count the number of NA and not NA crowd_size values for each month
+na_counts <- acled_subset_for_plot %>%
+  group_by(month) %>%
+  summarise(na_count = sum(is.na(crowd_size)),
+            not_na_count = sum(!is.na(crowd_size)))
+
+# Create the plot
+na_plot <- ggplot(na_counts, aes(x = month)) +
+  geom_line(aes(y = na_count, linetype = "NA")) +
+  geom_point(aes(y = na_count)) +
+  geom_line(aes(y = not_na_count, linetype = "Not NA")) +
+  geom_point(aes(y = not_na_count)) +
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  scale_linetype_manual(labels = c("Not Reported", "Reported"),
+                        values = c("NA" = "dashed", 
+                                   "Not NA" = "solid")) +
+  labs(title = "Monthly Number of Reported vs Not Reported Crowd Sizes",
+       x = "",
+       y = "Number of Records",
+       linetype = "Crowd Size Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+na_plot
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/crowd_size_reports_before_after_inv.png", plot = na_plot, width = 10, height = 6, dpi = 300)
+
+
+#### plots ####
 
 # floor_date() takes a date-time object and rounds it down to the nearest boundary of the specified time unit.
 # x <- ymd_hms("2009-08-03 12:01:59.23")
