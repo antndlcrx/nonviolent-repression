@@ -145,5 +145,10 @@ acled_clean$federal_subject <- mapping[acled_clean$admin1]
 acled_clean <- acled_clean %>%
   left_join(codes, by = c("federal_subject" = "region_name_en"))
 
+acled_clean <- acled_clean %>% 
+  mutate(source_origin = case_when(str_detect(source_scale, "International") ~ "international",
+                                   TRUE ~ "russian"))
+
 # write_csv(acled_clean, "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_09_07_2024.csv")
-write_excel_csv(acled_clean, "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_09_07_2024_utf8byte.csv")
+# write_excel_csv(acled_clean, "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_09_07_2024_utf8byte.csv")
+write_excel_csv(acled_clean, "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_16_07_2024_utf8byte.csv")

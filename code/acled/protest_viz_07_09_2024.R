@@ -19,7 +19,7 @@ acled1 = acled %>%
 
 #### protest features ####
 
-## crowd size ##
+#### crowd size ####
 
 sum(is.na(acled1$crowd_size)) # 1053, 3708 with "no report"
 
@@ -51,16 +51,14 @@ unique(acled1$crowd_size) # 671 unique entities
 ## missingness ##
 
 acled_subset_for_plot <- acled1 %>% 
-  filter(date >= '2021-01-01') %>%
+  # filter(date >= '2021-01-01') %>%
   mutate(month = floor_date(date, unit = "month"))
 
-# Count the number of NA and not NA crowd_size values for each month
 na_counts <- acled_subset_for_plot %>%
   group_by(month) %>%
   summarise(na_count = sum(is.na(crowd_size)),
             not_na_count = sum(!is.na(crowd_size)))
 
-# Create the plot
 na_plot <- ggplot(na_counts, aes(x = month)) +
   geom_line(aes(y = na_count, linetype = "NA")) +
   geom_point(aes(y = na_count)) +
@@ -84,6 +82,103 @@ na_plot <- ggplot(na_counts, aes(x = month)) +
 na_plot
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/crowd_size_reports_before_after_inv.png", plot = na_plot, width = 10, height = 6, dpi = 300)
 
+## reports shares 
+
+na_shares <- acled_subset_for_plot %>%
+  group_by(month) %>%
+  summarise(
+    total_count = n(),
+    not_na_count = sum(!is.na(crowd_size)),
+    na_count = sum(is.na(crowd_size))
+  ) %>%
+  mutate(share_reported = (not_na_count / total_count)*100)
+
+na_share_plot <- ggplot(na_shares, aes(x = month, y = share_reported)) +
+  geom_line(linetype = "solid") +
+  geom_point() +
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  labs(title = "Monthly Share of Reported Crowd Sizes",
+       x = "",
+       y = "Proportion of Reported Crowd Sizes") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 60, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "darkgreen", angle = 90, size = 3)
+
+na_share_plot
+
+#### organisers ####
+
+## count
+sum(is.na(acled1$org_indicator)) # 3238
+
+acled_subset_for_plot <- acled1 %>% 
+  # filter(date >= '2021-01-01') %>%
+  mutate(month = floor_date(date, unit = "month"))
+
+na_counts_org <- acled_subset_for_plot %>%
+  group_by(month) %>%
+  summarise(na_count = sum(is.na(org_indicator)),
+            not_na_count = sum(!is.na(org_indicator)))
+
+na_plot_org <- ggplot(na_counts_org, aes(x = month)) +
+  geom_line(aes(y = na_count, linetype = "NA")) +
+  geom_point(aes(y = na_count)) +
+  geom_line(aes(y = not_na_count, linetype = "Not NA")) +
+  geom_point(aes(y = not_na_count)) +
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  scale_linetype_manual(labels = c("Not Reported", "Reported"),
+                        values = c("NA" = "dashed", 
+                                   "Not NA" = "solid")) +
+  labs(title = "Monthly Number of Reported vs Not Reported Protest Organisers",
+       x = "",
+       y = "Number of Records",
+       linetype = "Organiser Report Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+na_plot_org
+
+## shares org
+
+na_shares_org <- acled_subset_for_plot %>%
+  group_by(month) %>%
+  summarise(
+    total_count = n(),
+    not_na_count = sum(!is.na(org_indicator)),
+    na_count = sum(is.na(org_indicator))
+  ) %>%
+  mutate(share_reported = (not_na_count / total_count)*100)
+
+na_share_org_plot <- ggplot(na_shares_org, aes(x = month, y = share_reported)) +
+  geom_line(linetype = "solid") +
+  geom_point() +
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  labs(title = "Monthly Share of Reported Organisers",
+       x = "",
+       y = "Proportion of Reported Organisers") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 60, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "darkgreen", angle = 90, size = 3)
+
+na_share_org_plot
 
 #### plots ####
 
