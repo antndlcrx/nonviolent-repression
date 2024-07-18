@@ -10,6 +10,11 @@ kprf = read_csv('C:/Users/murrn/GitHub/placeholder_data/kprf_output.csv',
 activatica = read_csv('C:/Users/murrn/GitHub/placeholder_data/activatica_output.csv', 
                       quote = "\'")
 
+activatica_cleaned <- activatica %>%
+  filter(type %in% c("news", "action", "post", "problem"))
+write_excel_csv(activatica_cleaned, "C:/Users/murrn/GitHub/nonviolent-repression/data/activatica_cleaned_utf8byte.csv")
+
+
 kavkaz = read_csv("C:/Users/murrn/GitHub/placeholder_data//kavkaz_output_complete.csv",
                   quote = "\'") 
 

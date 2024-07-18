@@ -7,7 +7,7 @@
 pacman::p_load(tidyverse, rio, ggplot2, lubridate)
 
 
-ACLED_DATA <- "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_09_07_2024.csv"
+ACLED_DATA <- "C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_16_07_2024_utf8byte.csv"
 
 # acled_more <- read_xlsx(ACLED_DATA)
 acled <- read_csv(ACLED_DATA)
@@ -48,7 +48,7 @@ unique(acled1$crowd_size) # 671 unique entities
 # "38 cars" 
 # "over 1 000 000" 
 
-## missingness ##
+##### missingness ######
 
 acled_subset_for_plot <- acled1 %>% 
   # filter(date >= '2021-01-01') %>%
@@ -77,7 +77,12 @@ na_plot <- ggplot(na_counts, aes(x = month)) +
        y = "Number of Records",
        linetype = "Crowd Size Status") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = .60, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = .60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "darkgreen", angle = 90, size = 3)
+
 
 na_plot
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/crowd_size_reports_before_after_inv.png", plot = na_plot, width = 10, height = 6, dpi = 300)
@@ -112,6 +117,8 @@ na_share_plot <- ggplot(na_shares, aes(x = month, y = share_reported)) +
   annotate(geom = "text", x = as.Date("2022-09-21"), y = 60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "darkgreen", angle = 90, size = 3)
 
 na_share_plot
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/crowd_size_reports_share_before_after_inv.png", plot = na_share_plot, width = 10, height = 6, dpi = 300)
+
 
 #### organisers ####
 
@@ -149,7 +156,7 @@ na_plot_org <- ggplot(na_counts_org, aes(x = month)) +
 
 na_plot_org
 
-## shares org
+## shares org  ##
 
 na_shares_org <- acled_subset_for_plot %>%
   group_by(month) %>%
@@ -179,8 +186,85 @@ na_share_org_plot <- ggplot(na_shares_org, aes(x = month, y = share_reported)) +
   annotate(geom = "text", x = as.Date("2022-09-21"), y = 60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "darkgreen", angle = 90, size = 3)
 
 na_share_org_plot
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/organisers_share_before_after_inv.png", plot = na_share_org_plot, width = 10, height = 6, dpi = 300)
 
-#### plots ####
+
+##### source plots ####
+
+### counts
+
+acled_source <- acled1 %>%
+  separate_rows(source_scale, sep = "-") %>% 
+  mutate(source_origin = case_when(source_scale == "International" ~ "International",
+                                   # source_scale == "New media" ~ "New media",
+                                   TRUE ~ "Domestic"))
+
+
+acled_subset_for_plot <- acled1 %>% 
+  # filter(source_origin != "New media") %>%
+  mutate(month = floor_date(date, unit = "month"))
+
+sources_counts <- acled_subset_for_plot %>%
+  group_by(month, source_origin) %>%
+  summarise(count = n()
+            )
+
+source_counts_plot <- ggplot(sources_counts, aes(x = month, y = count, linetype = source_origin)) +
+  geom_line() +
+  geom_point() +
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  scale_linetype_manual(labels = c("International", "Russian"),
+                        values = c("international" = "dashed",
+                                   "russian" = "solid")) +
+  labs(title = "Monthly Number of Reports by Source",
+       x = "",
+       y = "Number of Records",
+       linetype = "source") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+source_counts_plot
+
+#### sources share
+
+sources_share <- acled_subset_for_plot %>%
+  group_by(month, source_origin) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(month) %>%
+  mutate(share = count / sum(count))
+
+source_share_plot <- ggplot(sources_share, aes(x = month, y = share, linetype = source_origin)) +
+  geom_line() +
+  geom_point() +
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  scale_linetype_manual(labels = c("International", "Domestic"),
+                        values = c("international" = "dashed",
+                                   "russian" = "solid")) +
+  labs(title = "Monthly Share of Reports by Source",
+       x = "",
+       y = "Share of Records",
+       linetype = "Source") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = .60, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "red", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = .60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "darkgreen", angle = 90, size = 3)
+
+
+source_share_plot
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/share_by_source.png", plot = source_share_plot, width = 10, height = 6, dpi = 300)
+
+
+
 
 # floor_date() takes a date-time object and rounds it down to the nearest boundary of the specified time unit.
 # x <- ymd_hms("2009-08-03 12:01:59.23")
@@ -190,7 +274,7 @@ na_share_org_plot
 # round_date() takes a date-time object and time unit, and rounds it to the nearest value of the specified time unit. For rounding date-times which are exactly halfway between two consecutive units, the convention is to round up. Note that this is in line with the behavior
 
 acled_subset_for_plot <- acled %>% 
-  filter(date >= '2021-01-01') %>%
+  # filter(date >= '2021-01-01') %>%
   mutate(month = floor_date(date, unit = "month"),
          pro_gov = case_when(org_indicator == "pro_kremlin" ~ "Pro Government",
                              org_indicator == "syst_opposition" ~ "Systemic Opposition",
@@ -232,7 +316,7 @@ ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/protests_befor
 ##### protest by type #####
 
 acled_subset_for_plot <- acled %>% 
-  filter(date >= '2021-01-01') %>%
+  # filter(date >= '2021-01-01') %>%
   mutate(month = floor_date(date, unit = "month"),
          pro_gov = case_when(org_indicator == "pro_kremlin" ~ "Pro Government",
                              org_indicator == "syst_opposition" ~ "Systemic Opposition",
