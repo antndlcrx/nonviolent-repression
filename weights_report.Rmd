@@ -11,7 +11,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
                       warning = FALSE,
-                      message = FALSE)
+                      message = FALSE,
+                      results = 'asis')
 
 Sys.getlocale()
 # Set this to a locale that supports Cyrillic, for example, on Windows
@@ -20,7 +21,7 @@ Sys.setlocale("LC_ALL", "Russian")
 ##### Set Up #####
 pacman::p_load(tidyverse, readr, broom, 
                lubridate, gt, gtsummary, survey, readxl,
-               gridExtra, knitr, haven)
+               gridExtra, knitr, haven, nnet, stargazer)
 
 
 # categories for education
@@ -143,6 +144,29 @@ survey_aug <- read_csv("data/surveys/survey_aug.csv",
                              "Woman" = "Женский")
     )
 # -c(1:3,16:18) 
+
+
+survey_july <- read_xlsx("data/surveys/survey_june_july.xlsx")[-1,] %>% 
+  # adjust education
+  # education %in% na_education ~ "NA"
+    mutate(university_education = case_when(
+      Q5 %in% uni_education ~ "BA+",
+      TRUE ~ "BA-"),
+      gender = fct_recode(Q4,
+                             "Man"= "Мужской",
+                             "Woman" = "Женский"),
+      age = as.numeric(Q1),
+      age_group = case_when(
+            as.numeric(Q1) %in% c(18:24) ~ '18-24',
+            as.numeric(Q1) %in% c(25:34) ~ '25-34',
+            as.numeric(Q1) %in% c(35:44) ~ '35-44',
+            as.numeric(Q1) %in% c(45:54) ~ '45-54',
+            as.numeric(Q1) %in% c(55:64) ~ '55-64',
+            as.numeric(Q1) >= 65 ~ '65+',
+            TRUE ~ NA),
+    )
+
+
 ru_population_frame <- read_csv("data/surveys/ru_population_frame.csv")[-c(1:3,16:18), -c(3,7)]
 
 wider_age_categories <- list(
@@ -253,12 +277,14 @@ shares_levada <- calculate_shares(levada_omnibus, "Levada")
 shares_survey_march <- calculate_shares(survey_march, "Q. March")
 shares_survey_feb <- calculate_shares(survey_feb, "Q. February")
 shares_survey_aug <- calculate_shares(survey_aug, "Q. August")
+shares_survey_july <- calculate_shares(survey_july, "Q. July")
 
 
 combined_shares <- bind_rows(shares_levada,
                              shares_survey_march,
                              shares_survey_feb,
-                             shares_survey_aug) %>%
+                             shares_survey_aug,
+                             shares_survey_july) %>%
   pivot_wider(names_from = Survey, values_from = Share) %>% 
   mutate(Variable = case_when(
     Variable == "age_group" ~ "Age", # improve visibility
@@ -280,7 +306,7 @@ The Figure \ref{fig:census_comparison} depicts strata shares compared to the 202
 survey_march_strata <- survey_march %>% 
   group_by(gender, age_group, university_education) %>% 
   summarise(count = n()) %>%
-  mutate(proportion = count / nrow(survey_feb),
+  mutate(proportion = count / nrow(survey_march),
          source = "March Survey")
 
 
@@ -293,15 +319,23 @@ survey_feb_strata <- survey_feb %>%
 survey_aug_strata <- survey_aug %>% 
   group_by(gender, age_group, university_education) %>% 
   summarise(count = n()) %>%
-  mutate(proportion = count / nrow(survey_feb),
+  mutate(proportion = count / nrow(survey_aug),
          source = "August Survey")
+
+survey_jul_strata <- survey_july %>% 
+  group_by(gender, age_group, university_education) %>% 
+  summarise(count = n()) %>%
+  mutate(proportion = count / nrow(survey_july),
+         source = "July Survey")
 
 pop_strata <- ru_population_frame %>% 
   ungroup() %>% 
   mutate(proportion = Freq/sum(Freq),
          source = "Census 2020")
 
-combined_strata <- combined_strata <- rbind(survey_march_strata, survey_feb_strata, survey_aug_strata, pop_strata) 
+combined_strata <- combined_strata <- rbind(survey_march_strata, survey_feb_strata,
+                                            survey_aug_strata, survey_jul_strata,
+                                            pop_strata) 
 
 census_for_feb <- combined_strata %>% 
   filter(source == "Census 2020") %>% 
@@ -319,9 +353,11 @@ ggplot(combined_strata, aes(x = university_education,
   # geom_line(aes(group = interaction(age_group, university_education))) +
   facet_grid(gender ~ age_group) +
   scale_color_manual(values = c("Census 2020" = "red", "March Survey" = "purple", 
-                                "February Survey" = "lightblue", "August Survey" = "darkgreen")) +
+                                "February Survey" = "lightblue", "August Survey" = "darkgreen",
+                                "July Survey" = "blue")) +
   scale_shape_manual(values = c("Census 2020" = 16,"March Survey" = 15,
-                                "February Survey" = 17, "August Survey" = 18)) +
+                                "February Survey" = 17, "August Survey" = 18,
+                                "July Survey" = 21)) +
   labs(x = "University Education", y = "Proportion", shape = "Source", color = "Source") +
   theme(legend.position = "bottom") +
   theme_bw()
@@ -334,7 +370,7 @@ The main observations are:
 - We have oversampled young women, especially 25-34 years old with university education, and undersampled men without university education across all age categories except 55- and 65+. 
 
 
-## Weights witth Survey package
+## Weights with Survey package
 
 To compute post-stratification weights we rely on the `postStratify` function from the `survey` package. The function adjusts the sampling and replicate weights so that the joint distribution of a set of
 post-stratifying variables matches the known population joint distribution. **However, the package documentation does not describe how exactly the adjustment is implemented.**
@@ -457,6 +493,44 @@ top_five_rows_aug <- survey_aug  %>%
 kable(top_five_rows_aug, caption = "August Survey, Top Five Rows by Weight", align = 'c')
 ```
 
+### July
+```{r}
+## survey library ##
+unweighted_data <- svydesign(ids = ~1, data = survey_july)
+
+
+weighted <- postStratify(unweighted_data, ~age_group + gender + university_education,
+             ru_population_frame, partial=TRUE)
+
+# save weights 
+survey_july$weight_poststratify <- weights(weighted)
+
+sum_jul <- round(summary(weights(weighted)), 2)
+
+sum_jul_mat <-  matrix(as.numeric(sum_jul), nrow = 1, 
+                          dimnames = list(c("Value"),
+                          names(sum_jul)
+                          )
+                          )
+
+kable(sum_jul_mat, 
+      caption = "August Survey PostStratify Weights Summary", 
+      align = 'c', 
+      format = "markdown")
+```
+As with previous surveys, the July survey's distribution of weights is also skewed and the disparities between the bulk of the distribution and its tales are in the same orders of magnitude. The largest weight (and biggest disparity to population census 2020 is men without university education aged 35-44).
+
+```{r}
+top_five_rows_jul <- survey_july  %>%
+  distinct(weight_poststratify, .keep_all = TRUE) %>% 
+  arrange(desc(weight_poststratify)) %>% 
+  select(age_group, gender, university_education, weight_poststratify)%>% 
+  head(5)
+
+kable(top_five_rows_jul, caption = "July Survey, Top Five Rows by Weight", align = 'c')
+```
+
+
 \newpage
 
 ```{r, echo=FALSE, fig.height=8, fig.width=12}
@@ -472,13 +546,20 @@ survey_aug_selected <- survey_aug %>%
   mutate(Survey = 'August') %>%
   select(weight_poststratify, Survey)
 
-combined_weights <- rbind(survey_march_selected, survey_feb_selected, survey_aug_selected)
+survey_jul_selected <- survey_july %>%
+  mutate(Survey = 'July') %>%
+  select(weight_poststratify, Survey)
+
+combined_weights <- rbind(survey_march_selected, survey_feb_selected,
+                          survey_aug_selected, survey_jul_selected)
 
 ggplot(combined_weights, aes(x = weight_poststratify, fill = Survey)) +
   geom_histogram(data = subset(combined_weights, Survey == 'March'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'August'), bins = 100, alpha = 0.5, color = "black") +
-  scale_fill_manual(values = c("March" = "lightblue", "February" = "blue", "August" = "red")) +
+  geom_histogram(data = subset(combined_weights, Survey == 'July'), bins = 100, alpha = 0.5, color = "black") +
+  scale_fill_manual(values = c("March" = "lightblue", "February" = "blue", "August" = "red",
+                               "July" = "green")) +
   theme_minimal() +
   labs(title = "Distribution of Weights by Survey",
        x = "Weight",
@@ -509,7 +590,14 @@ plot_aug <- ggplot(survey_aug_selected, aes(x = weight_poststratify)) +
        x = "Weight",
        y = "Frequency")
 
-grid.arrange(plot_march, plot_feb, plot_aug, ncol = 3, top = "Distribution of Weights Across Months")
+plot_jul <- ggplot(survey_jul_selected, aes(x = weight_poststratify)) +
+  geom_histogram(bins = 100, fill = "green", color = "black", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+       x = "Weight",
+       y = "Frequency")
+
+grid.arrange(plot_march, plot_feb, plot_aug, plot_jul, ncol = 2, top = "Distribution of Weights Across Months")
 ```
 
 
@@ -611,6 +699,38 @@ kable(sum_man_aug_mat,
       format = "markdown")
 ```
 
+
+### July
+```{r}
+# calculate weights and print the df with weights
+weights_jul_strata_man <- left_join(survey_jul_strata,
+                            pop_strata,
+                            c("gender", "age_group", "university_education")) %>% 
+  rename(population_proportion = proportion.y,
+         sample_proportion = proportion.x)  %>% 
+  # calculate weights as popul prop/sample prop
+  mutate(weight = population_proportion / sample_proportion)
+
+sum_man_jul <- round(summary(weights_jul_strata_man$weight), 2)
+
+sum_man_jul_mat <-  matrix(as.numeric(sum_man_jul), nrow = 1, 
+                          dimnames = list(c("Value"),
+                          names(sum_man_jul)
+                          )
+                          )
+
+survey_july <- survey_july %>%
+  left_join(weights_jul_strata_man, by = c("age_group", "gender", "university_education")) %>%
+  rename(weight_manually_calculated = weight) 
+
+kable(sum_man_jul_mat, 
+      caption = "July Survey Weights Summary", 
+      align = 'c', 
+      format = "markdown")
+```
+
+
+
 \newpage
 
 ```{r echo=FALSE, fig.height=8, fig.width=12}
@@ -626,13 +746,20 @@ weights_aug_strata_man <- weights_aug_strata_man %>%
   mutate(Survey = 'August') %>%
   select(weight, Survey,  age_group, gender, university_education)
 
-combined_weights <- rbind(weights_march_strata_man, weights_feb_strata_man, weights_aug_strata_man)
+weights_jul_strata_man <- weights_jul_strata_man %>%
+  mutate(Survey = 'July') %>%
+  select(weight, Survey,  age_group, gender, university_education)
+
+combined_weights <- rbind(weights_march_strata_man, weights_feb_strata_man,
+                          weights_aug_strata_man, weights_jul_strata_man)
 
 ggplot(combined_weights, aes(x = weight, fill = Survey)) +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'August'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'March'), bins = 100, alpha = 0.5, color = "black") +
-  scale_fill_manual(values = c("February" = "blue", "August" = "red", "March" = "lightblue")) +
+  geom_histogram(data = subset(combined_weights, Survey == 'July'), bins = 100, alpha = 0.5, color = "black") +
+  scale_fill_manual(values = c("February" = "blue", "August" = "red", "March" = "lightblue", 
+                               "July" = "green")) +
   theme_minimal() +
   labs(title = "Distribution of Weights by Survey",
        x = "Weight",
@@ -657,22 +784,189 @@ plot_march <- ggplot(weights_march_strata_man, aes(x = weight)) +
   theme_minimal() +
   labs(x = "Weight", y = "Frequency")
 
-grid.arrange(plot_feb, plot_aug, plot_march, ncol = 3, top = "Distribution of Weights Across Months")
+plot_july <- ggplot(weights_jul_strata_man, aes(x = weight)) +
+  geom_histogram(bins = 100, fill = "green", color = "black", alpha = 0.5) +
+  theme_minimal() +
+  labs(x = "Weight", y = "Frequency")
+
+grid.arrange(plot_feb, plot_aug, plot_march, plot_july, ncol = 2, top = "Distribution of Weights Across Months")
 ```
 
 Calculating weights this way gives us the same overall picture. The main difference is in the orders of magnitude between the median weight and the tail (highest weight). 
 
 For **February** survey, the difference (max weight / median weight) with `postStratify` is **`r round(sum_feb["Max."] / sum_feb["Median"], 2)`**, but with simple manually created weights it is **`r round(sum_man_feb["Max."] / sum_man_feb["Median"], 2)`**. For **August** survey, the difference with `postStratify` is **`r round(sum_aug["Max."] / sum_aug["Median"], 2)`**, but with simple manually created weights it is **`r round(sum_man_aug["Max."] / sum_man_aug["Median"], 2)`**.
 
- 
-```{r}
-# survey_feb <- survey_feb %>%
-#   left_join(weights_feb_strata_man, by = c("age_group", "gender", "university_education")) %>%
-#   rename(weight_manually_calculated = weight) %>% 
-#   select(-Survey)
+## Survey July Randomisation check
 
-# write.csv(survey_feb, "data/surveys/survey_feb_weights.csv", row.names = FALSE)
+To check for randomisation, I first create a categorical variable that captures treatment assignment:
+
+```
+survey_july <- survey_july %>% 
+  mutate(
+    treatment1 = case_when(!is.na(DV1A) ~ "A",
+                           !is.na(DV1B) ~ "B",
+                           !is.na(DV1C) ~ "C",
+                           !is.na(DV1D) ~ "D",
+                           !is.na(DV1E) ~ "E",
+                           !is.na(DV1F) ~ "F",
+                           !is.na(DV1H) ~ "I",
+                           !is.na(DV1I) ~ "I",
+                           TRUE ~ NA_character_)
+```
+
+Then, I run a multinomial logit to see if the odds of a treatment category assignment relative to control (or first treatment category) can be predicted as a function of the base demographic controls, namely age, gender, university education, and size of a city of residence.
+
+As I see from the tables below, we do not have any violation of random assignment, as indicated by the absence of any relationships between treatment assignment and demographic variables that can be statistically different from zero. 
+                           
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, results=FALSE}
+survey_july <- survey_july %>% 
+  mutate(
+    treatment1 = case_when(!is.na(DV1A) ~ "A",
+                           !is.na(DV1B) ~ "B",
+                           !is.na(DV1C) ~ "C",
+                           !is.na(DV1D) ~ "D",
+                           !is.na(DV1E) ~ "E",
+                           !is.na(DV1F) ~ "F",
+                           !is.na(DV1H) ~ "I",
+                           !is.na(DV1I) ~ "I",
+                           TRUE ~ NA_character_),
+    urban = case_when(
+      Q3 == "В городе более 1 млн. жителей (кроме Москвы и Санкт-Петербурга)" ~ "city_more_than_1_million",
+      Q3 == "Москва" ~ "Moscow",
+      Q3 == "Санкт-Петербург" ~ "Saint_Petersburg",
+      Q3 == "В городе / поселке / селе 100 тыс. и менее жителей" ~ "city_or_village_less_than_100_thousand",
+      Q3 == "В городе 250-500 тыс. жителей" ~ "city_250_500_thousand",
+      Q3 == "В городе 500 тыс.-1 млн. жителей" ~ "city_500_thousand_to_1_million",
+      Q3 == "В городе 100-250 тыс. жителей" ~ "city_100_250_thousand",
+      Q3 == "Отказ от ответа" ~ "no_answer",
+      Q3 == "Затрудняюсь ответить" ~ "difficult_to_answer",
+      TRUE ~ Q3
+    )
+  )
+
+
+check_one <- multinom(treatment1 ~ age + gender + university_education + urban, data = survey_july)
 
 ```
 
+
+```{r}
+stargazer(check_one,
+          header=FALSE,
+          title="Randomisation Check Protest",
+          digits=2,
+          column.sep.width = "2pt", # to reduce column width
+          font.size = "small", # to make font size smaller
+          no.space = TRUE,
+          add.lines = list(c("\\textit{$n$}", nrow(survey_july), nrow(survey_july),
+                             nrow(survey_july), nrow(survey_july),
+                             nrow(survey_july), nrow(survey_july),
+                             nrow(survey_july), nrow(survey_july))))
+```
+
+
+\newpage
+```{r echo = FALSE, warning = FALSE, message = FALSE, results=FALSE}
+survey_july <- survey_july %>% 
+  mutate(
+    treatment2 = case_when(!is.na(DV3A) ~ "A",
+                           !is.na(DV3B) ~ "B",
+                           !is.na(DV3C) ~ "C",
+                           TRUE ~ NA_character_)
+  )
+
+
+check_two <- multinom(treatment2 ~ age + gender + university_education + urban, data = survey_july)
+
+```
+
+```{r}
+stargazer(check_two,
+          digits=2,
+          title="Randomisation Check Education Experiment 1",
+          header=FALSE,
+          no.space = TRUE,
+          add.lines = list(c("\\textit{$n$}", nrow(survey_july), nrow(survey_july))))
+```
+
+
+
+\newpage
+```{r echo = FALSE, warning = FALSE, message = FALSE, results=FALSE}
+survey_july <- survey_july %>% 
+  mutate(
+    treatment3 = case_when(!is.na(DV5A) ~ "A",
+                           !is.na(DV5B) ~ "B",
+                           !is.na(DV5C) ~ "C",
+                           TRUE ~ NA_character_)
+  )
+
+check_three <- multinom(treatment3 ~ age + gender + university_education + urban, data = survey_july)
+
+```
+
+```{r}
+stargazer(check_three,
+          header=FALSE,
+          title="Randomisation Check Education Experiment 2",
+          digits=2,
+          no.space = TRUE,
+          add.lines = list(c("\\textit{$n$}", nrow(survey_july), nrow(survey_july))))
+```
+\newpage
+## Survey July Missingness
+
+To check for missing responces, I pull together all treatment variables of the same experiment and treat answers "I do not know" and "refuse to answer" as missing. Then, I estimate if base control demographic variables predict missingness in the experiment. The table below shows the results.
+
+As I see from the table, younger people, women, and people who could not answer about the population size of their place of residence are less likely to answer. People with university education are more likely to provide an answer to the experiments questions.
+ 
+```{r}
+survey_july <- survey_july %>%
+  mutate(
+    missing_treatment1 = coalesce(DV1A, DV1B, DV1C, DV1D, DV1E, DV1F, DV1H, DV1I),
+    missing_treatment1 = case_when(
+      missing_treatment1 == "Отказ от ответа" ~ 1,
+      missing_treatment1 == "Затрудняюсь ответить" ~ 1,
+      TRUE ~ 0
+    ),
+    missing_treatment2 = coalesce(DV3A, DV3B, DV3C),
+    missing_treatment2 = case_when(
+      missing_treatment2 == "Отказ от ответа" ~ 1,
+      missing_treatment2 == "Затрудняюсь ответить" ~ 1,
+      TRUE ~ 0
+    ),
+    missing_treatment3 = coalesce(DV5A, DV5B, DV5C),
+    missing_treatment3 = case_when(
+      missing_treatment3 == "Отказ от ответа" ~ 1,
+      missing_treatment3 == "Затрудняюсь ответить" ~ 1,
+      TRUE ~ 0
+    )
+  )
+
+
+missing_t1 <- lm(missing_treatment1 ~ age + gender + university_education + urban, data = survey_july)
+missing_t2 <- lm(missing_treatment2 ~ age + gender + university_education + urban, data = survey_july)
+missing_t3 <- lm(missing_treatment3 ~ age + gender + university_education + urban, data = survey_july)
+
+
+```
+
+
+
+```{r}
+models = list(missing_t1, missing_t2, missing_t3)
+stargazer(models,
+          title = "Missings Check Experiments",
+          digits=2,
+          header=FALSE,
+          no.space = TRUE)
+
+
+```
+
+
+```{r}
+# write_csv(survey_july, "data/surveys/survey_july_with_weights.csv")
+```
 
