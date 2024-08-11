@@ -317,7 +317,7 @@ ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/protests_befor
 
 acled_subset_for_plot <- acled %>% 
   # filter(date >= '2021-01-01') %>%
-  mutate(month = floor_date(date, unit = "month"),
+  mutate(month = ceiling_date(date, unit = "month"),
          pro_gov = case_when(org_indicator == "pro_kremlin" ~ "Pro Government",
                              org_indicator == "syst_opposition" ~ "Systemic Opposition",
                              TRUE ~ "Other"),
@@ -352,13 +352,15 @@ monthly_n_plot_type <- ggplot(unique_counts_type, aes(x = month, y = num_protest
   labs(title = "Monthly Number of Unique Protests in Russia by Organiser",
        x = "",
        y = "Number of Unique Protests",
-       color = "Protest Type") +
+       color = "Protest Type") + 
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
-  annotate(geom = "text", x = as.Date("2022-02-24"), y = 160, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "red", angle = 90, size = 3) +
-  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
-  annotate(geom = "text", x = as.Date("2022-09-21"), y = 160, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "darkgreen", angle = 90, size = 3)
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 160, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 160, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2021-01-17"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2021-01-17"), y = 160, label = "Navalny's retun to Moscow", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
 
 
 monthly_n_plot_type
