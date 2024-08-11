@@ -354,14 +354,13 @@ monthly_n_plot_type <- ggplot(unique_counts_type, aes(x = month, y = num_protest
        y = "Number of Unique Protests",
        color = "Protest Type") + 
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6.5)) +
   geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
   annotate(geom = "text", x = as.Date("2022-02-24"), y = 160, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
   geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
   annotate(geom = "text", x = as.Date("2022-09-21"), y = 160, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
   geom_vline(xintercept = as.Date("2021-01-17"), linetype = "solid", color = "black") +
   annotate(geom = "text", x = as.Date("2021-01-17"), y = 160, label = "Navalny's retun to Moscow", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
-
 
 monthly_n_plot_type
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/protests_before_after_inv_by_type.png", plot = monthly_n_plot_type, width = 10, height = 6, dpi = 300)
