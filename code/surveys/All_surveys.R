@@ -648,7 +648,7 @@ data_justified_repressions <- bind_rows(
     justified_arrest_participants = case_when(
       arrest_participants == 1 ~ "not justified",
       arrest_participants == 2 ~ "justified",
-      TRUE ~ NA_character_
+      TRUE ~ "NA"
     ),
     putin_support = case_when(
       putin_support == 1 ~ "approve",
