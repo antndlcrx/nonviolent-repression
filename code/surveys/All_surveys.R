@@ -7,6 +7,7 @@ library(ggplot2)
 library(reshape2)
 library(labelled)
 library(readxl)
+library(tidyr)
 
 #library(writexl)
 
@@ -38,11 +39,21 @@ QJuly <- QJuly %>% mutate(across(everything(), type.convert, as.is = TRUE))
 
 #### 1.3. Selecting variables ####
 Ljul_selected <- Ljuly %>%
-  select(qobl, qto, qs1, qs2, qs3, qd8, qq10_cod, qq7a, q4, qq7b) %>%
+  select(qobl, qto, qs1, qs2, qs3, qd8, qq10_cod, qq7a, q4, qq7b, qq5) %>%
   rename(region = qobl, settlement = qto, age = qs2, gender = qs1, educaction = qs3, income = qd8, vote_next = qq10_cod,
-         approved_protest_partic	= qq7a, putin_support = q4, unauth_protest_partic = qq7b)
+         approved_protest_partic	= qq7a, putin_support = q4, unauth_protest_partic = qq7b, 
+         arrest_participants = qq5)
 Ljul_selected$survey_indicator <- 1
 Ljul_selected$survey_time <- "July 2020"
+
+# qQ5 
+# 1	полностью оправданы
+# 2	скорее оправданы
+# 3	ни то чтобы оправданы, ни не оправданы
+# 4	скорее не оправданы
+# 5	совершенно не оправданы
+# 97	затрудняюсь ответить
+# 98	отказ от ответа
 
 Lsep_s <- Lsep %>%
   select (qS1, age, education, q2A, q19A, qD1B, qD8, qRNP, q19B) %>%
@@ -50,19 +61,44 @@ Lsep_s <- Lsep %>%
           vote_next=	qD1B, income=qD8, region	=qRNP)
 Lsep_exp <- Lsep_exp %>%
   select(qQ3B) %>%
-  rename(law_obedience = qQ3B)
+  rename(law_obedience_organisers_participants = qQ3B)
 Lsep_selected <- cbind(Lsep_s, Lsep_exp)
 Lsep_selected$survey_indicator <- 2
 Lsep_selected$survey_time <- "September 2020"
+
+unique(Lsep_selected$law_obedience_organisers_participants
+       )
+
+# ## <labelled<double>[7]>: Q3B. СКАЖИТЕ, ПОЖАЛУЙСТА, НАСКОЛЬКО ВЫ СОГЛАСНЫ ИЛИ НЕ СОГЛАСНЫ С ТЕМ, 
+# ЧТО УЧАСТНИКИ И ОРГАНИЗАТОРЫ ЛЮБЫХ МИТИНГОВ ДОЛЖНЫ ПОДЧИНЯТЬСЯ ЗАКОНУ ВО ВСЕХ СЛУЧАЯХ, 
+# ДАЖЕ ЕСЛИ ОНИ НЕ СОГЛАСНЫ С РЕШЕНИЕМ ОРГАНОВ ВЛАСТИ?
+
 
 res_selected <- res %>%
   select(age_round1, gender_round1, educ_round1, q39, qO1, q80_1, q80_2, q80_3, q81_1, q81_2, q81_3, qG5, qD6) %>%
   rename(age = age_round1, gender = gender_round1, educaction = educ_round1, vote_next = q39, law_obedience = qO1,
          protest_permition = q80_1, arrest_participants = q80_2,
          arrest_organizers = q80_3, limit_websites = q81_1, surveilance = q81_2, foreign_agent = q81_3,
-         putin_support = qG5, income = qD6)
+         putin_support = qG5, income = qD6) %>% 
+  mutate(law_obedience = as.character(law_obedience)) %>%
+  mutate(law_obedience = case_when(
+    law_obedience == "2" ~ "sometimes_violate",
+    law_obedience == "1" ~ "always_abide",
+    law_obedience %in% c("98", "99") ~ "no_answer",
+    TRUE ~ law_obedience
+  ))
+
 res_selected$survey_indicator <- 3
 res_selected$survey_time <- "December 2021"
+
+unique(res_selected$law_obedience)
+
+sum(is.na(res_selected$law_obedience)) #729
+
+# 1. Подчиняться закону во всех случаях, без исключений,
+# 2. В некоторых случаях следовать голосу своей совести, даже если это ведет к нарушению закона,
+# 98. Затрудняюсь ответить,
+# 99. Отказ от ответа
 
 ## August
 Qaug_selected <- Qaug %>%
@@ -76,9 +112,18 @@ Qaug_selected <- Qaug %>%
          arrest_organizers = protest_arrest_organizers_Q12_3,
          limit_websites = media_foreign_websites_Q13_1, surveilance = media_surveilliance_Q13_2, 
          foreign_agent = media_foreign_agents_Q13_3, approved_protest_partic = protest_participate_authorized_Q16_1, 
-         unauth_protest_partic = protest_participate_unauthorized_Q16_2, putin_support = putin_approve_Q8)
+         unauth_protest_partic = protest_participate_unauthorized_Q16_2, putin_support = putin_approve_Q8)%>% 
+  mutate(law_obedience = case_when(
+    law_obedience == "В некоторых случаях следовать голосу своей совести, даже если это ведет к нарушению закона" ~ "sometimes_violate",
+    law_obedience == "Подчиняться закону во всех случаях, без исключений" ~ "always_abide",
+    TRUE ~ law_obedience  
+  ))
+
 Qaug_selected$survey_indicator <- 4
 Qaug_selected$survey_time <- "August 2023"
+
+unique(Qaug_selected$law_obedience)
+sum(is.na(Qaug_selected$law_obedience))
 
 
 # 12A. По Вашему мнению, насколько в нынешних условиях оправданы следующие действия государства по регулированию протестов в России? 
@@ -94,9 +139,29 @@ Qaug_selected$survey_time <- "August 2023"
 Qfeb_selected <- Qfeb %>% 
   select(q1, q4, q2, q5, q8, q20, q9, q11_1, q11_2, q7) %>%
   rename(age = q1, gender = q4, educaction = q5, vote_next = q8, income = q20, region = q2, law_obedience = q9, 
-         approved_protest_partic = q11_1, unauth_protest_partic = q11_2, putin_support = q7)
+         approved_protest_partic = q11_1, unauth_protest_partic = q11_2, putin_support = q7) %>% 
+  mutate(law_obedience = case_when(
+    law_obedience == "2" ~ "sometimes_violate",
+    law_obedience == "1" ~ "always_abide",
+    law_obedience == "3" ~ "no_answer",
+    law_obedience == "4" ~ "no_answer"
+  ))
+
 Qfeb_selected$survey_indicator <- 5
 Qfeb_selected$survey_time <- "February 2024"
+
+unique(Qfeb_selected$law_obedience)
+
+# 1
+# Подчиняться закону во всех случаях, без исключений
+# 2
+# В некоторых случаях следовать голосу своей совести, даже если это ведет к нарушению закона
+# 3
+# Затрудняюсь ответить
+# 4
+# Отказ от ответа
+
+
 
 # 11.A .... Участие в согласованной демонстрации
 # 11B. Есть ряд возможностей, с помощью которых граждане могут выражать свое мнение. Скажите, пожалуйста, участвовали ли Вы когда-либо в своей жизни в таких действиях и считаете ли Вы, что это допустимый способ выражения своей позиции такими способами? 
@@ -107,9 +172,19 @@ Qapr_selected <- Qapr %>%
   select(Q1, Q4, Q5, Q2, Q21, Q12, Q17_1, Q17_2, Q18_1, Q18_2, Q18_3, Q11) %>%
   rename(age = Q1, gender = Q4, educaction = Q5, income = Q21, region = Q2, law_obedience = Q12,limit_websites = Q17_1, 
          protest_permition = Q18_1, arrest_participants = Q18_2,
-         arrest_organizers = Q18_3, foreign_agent = Q17_2, putin_support = Q11)
+         arrest_organizers = Q18_3, foreign_agent = Q17_2, putin_support = Q11) %>% 
+  mutate(law_obedience = case_when(
+    law_obedience == "В некоторых случаях следовать голосу своей совести, даже если это ведет к нарушению закона " ~ "sometimes_violate",
+    law_obedience == "Затрудняюсь ответить  " ~ "no_answer",
+    law_obedience == "Отказ от ответа " ~ "no_answer",
+    law_obedience == "Подчиняться закону во всех случаях, без исключений " ~ "always_abide",
+    TRUE ~ law_obedience 
+  ))
+
 Qapr_selected$survey_indicator <- 6
 Qapr_selected$survey_time <- "April 2024"
+
+
 
 
 # 18A..Tребование, чтобы организаторы протеста получили разрешение на проведение митинга
@@ -121,7 +196,15 @@ QJuly_selected <- QJuly %>%
   rename(age = Q1, gender = Q4, educaction = Q5, income = Q19, region = Q2,
          putin_support = Q11, law_obedience = Q12, vote = Q13,
          protest_permition = Q16_1, arrest_participants = Q16_2,
-         arrest_participants_authorised = Q16_3)
+         arrest_participants_authorised = Q16_3) %>% 
+  mutate(law_obedience = case_when(
+    law_obedience == "В некоторых случаях следовать голосу своей совести, даже если это ведет к нарушению закона" ~ "sometimes_violate",
+    law_obedience == "Затрудняюсь ответить" ~ "no_answer",
+    law_obedience == "Отказ от ответа" ~ "no_answer",
+    law_obedience == "Подчиняться закону во всех случаях, без исключений" ~ "always_abide",
+    TRUE ~ law_obedience  # Retain original value if it doesn't match any of the conditions
+  ))
+
 QJuly_selected$survey_time <- "July 2024"
 
 
@@ -136,8 +219,14 @@ rm(list = c("Ljuly", "Lsep","res", "Qaug", "Qfeb", "Qapr", "Lsep_s", "Lsep_exp")
 #### Recoding ####
 # Law obidience
 table(Qfeb_selected$law_obedience)
-Qfeb_selected$law_obedience[Qfeb_selected$law_obedience == 3] <- "no_answer"
-Qfeb_selected$law_obedience[Qfeb_selected$law_obedience == 4] <- "no_answer"
+# Qfeb_selected$law_obedience[Qfeb_selected$law_obedience == 3] <- "no_answer"
+# Qfeb_selected$law_obedience[Qfeb_selected$law_obedience == 4] <- "no_answer"
+# 
+# table(Ljuly$law_obedience)
+
+
+# res unk what 1 and 2 stand for
+# July 2019 has no law question
 
 #Education
 table(Ljul_selected$educaction)
@@ -587,6 +676,87 @@ Qapr_selected <- datasets[[5]]
 QJuly_selected <- datasets[[6]]
 res_selected <- datasets[[7]]
 
+# law obedience
+data_law_obedience <- bind_rows(
+  Qaug_selected %>% select(survey_time, putin_support, law_obedience),
+  Qfeb_selected %>% select(survey_time, putin_support, law_obedience),
+  Qapr_selected %>% select(survey_time, putin_support, law_obedience),
+  QJuly_selected %>% select(survey_time, putin_support, law_obedience),
+  res_selected %>%
+    mutate(law_obedience = replace_na(law_obedience, "no_answer"))
+  %>% select(survey_time, putin_support, law_obedience),
+) %>% 
+  mutate(
+    putin_support = case_when(
+      putin_support == 1 ~ "approve",
+      putin_support == 2 ~ "disapprove",
+      putin_support == "Одобряю" ~ "approve",
+      putin_support == "Не одобряю" ~ "disapprove",
+      putin_support == "Одобряю  " ~ "approve",
+      putin_support == "Не одобряю  " ~ "disapprove",
+      T ~ NA
+    ),
+    survey_time = factor(survey_time, levels = c("July 2020", "September 2020", "December 2021",
+                                                 "August 2023", "February 2024", "April 2024", "July 2024"))
+  ) 
+
+report_shares = data_law_obedience %>%
+  group_by(survey_time) %>%
+  summarize(
+    no_answer_law_obedience = mean(law_obedience == "no_answer", na.rm = TRUE) * 100,
+    na_putin_support = mean(is.na(putin_support), na.rm = TRUE) * 100
+  )
+
+plot_na_law <- ggplot(report_shares, aes(x = survey_time)) +
+  geom_line(aes(y = no_answer_law_obedience, color = "No Answer - Law Obedience", group = 1), size = 1) +
+  geom_line(aes(y = na_putin_support, color = "NA - Putin Support", group = 2), size = 1) +
+  geom_point(aes(y = no_answer_law_obedience, color = "No Answer - Law Obedience"), size = 3) +
+  geom_point(aes(y = na_putin_support, color = "NA - Putin Support"), size = 3) +
+  labs(
+    title = "Shares of 'No Answer' for Law Obedience and NA for Putin Support Across Survey Times",
+    x = "Survey Time",
+    y = "Percentage",
+    color = "Response Type"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/no_answer_law.png", plot = plot_na_law, width = 10, height = 6, dpi = 300)
+
+
+# unique(data_law_obedience$putin_support)
+# sum(is.na(data_law_obedience$putin_support))
+
+# sum(is.na(data_law_obedience$law_obedience)) # 729, all from RES
+# sum(is.na(data_law_obedience$putin_support)) # 5823
+
+# Calculate the shares
+plot_law_data <- data_law_obedience %>%
+  group_by(survey_time, putin_support) %>%
+  summarize(
+    share_always_abide = mean(law_obedience == "always_abide", na.rm = F),
+    total = n()
+  )
+
+# Plot 1: Share of People Who Approve or Participate in Unauthorized Protests
+plot_law <- ggplot(plot_law_data, aes(x = survey_time, y = share_always_abide, color = putin_support, group = putin_support)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Share of People Who Think One Should Always Abide the Law",
+    x = "Survey Time",
+    y = "Share of Respondents",
+    color = "Putin's Approval"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal()
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/share_always_abide_law.png", plot = plot_law, width = 10, height = 6, dpi = 300)
+
+
+
+
+# Unauthr Protest
 
 data_approv_protest <- bind_rows(
   Ljul_selected %>% select(survey_time, putin_support, unauth_protest_partic),
@@ -597,23 +767,56 @@ data_approv_protest <- bind_rows(
   mutate(
     unauth_protest_approve = case_when(
       unauth_protest_partic %in% c(1, 2) ~ "approve",
+      unauth_protest_partic %in% c("Я считаю такой способ допустимым, но сам(а) не участвовал(а)", 
+                                   "Я считаю этот способ допустимым, и сам(а) участвовал (а)") ~ "approve",
       unauth_protest_partic == 3 ~ "disapprove",
-      TRUE ~ NA_character_
+      unauth_protest_partic == "Я считаю такой способ недопустимым и сам(а) не участвовал(а)" ~ "disapprove",
+      TRUE ~ "no_answer"
     ),
     putin_support = case_when(
       putin_support == 1 ~ "approve",
       putin_support == 2 ~ "disapprove",
-      TRUE ~ NA_character_
+      putin_support == "Одобряю" ~ "approve",
+      putin_support == "Не одобряю" ~ "disapprove",
+      putin_support == "Одобряю  " ~ "approve",
+      putin_support == "Не одобряю  " ~ "disapprove",
+      T ~ NA
     ),
     survey_time = factor(survey_time, levels = c("July 2020", "September 2020", "August 2023", "February 2024"))
-  ) %>%
-  filter(!is.na(unauth_protest_approve) & !is.na(putin_support))
+  ) 
+
+unique(data_approv_protest$unauth_protest_approve)
+
+report_no_answer <- data_approv_protest %>%
+  group_by(survey_time) %>%
+  summarize(
+    no_answer_protest = mean(unauth_protest_approve == "no_answer", na.rm = TRUE) * 100,
+    no_answer_putin = mean(is.na(putin_support), na.rm = TRUE) * 100
+  )
+
+plot_na_prot_part <- ggplot(report_no_answer, aes(x = survey_time)) +
+  geom_line(aes(y = no_answer_protest, color = "No Answer - Protest", group = 1), size = 1) +
+  geom_line(aes(y = no_answer_putin, color = "No Answer - Putin", group = 2), size = 1) +
+  geom_point(aes(y = no_answer_protest, color = "No Answer - Protest"), size = 3) +
+  geom_point(aes(y = no_answer_putin, color = "No Answer - Putin"), size = 3) +
+  labs(
+    title = "Shares of 'No Answer' for Unauthorized Protest Participation and NA for Putin Support",
+    x = "Survey Time",
+    y = "Percentage",
+    color = "Response Type"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/na_prot_part.png", plot = plot_na_prot_part, width = 10, height = 6, dpi = 300)
+
+
 
 # Calculate the shares
 plot1_data <- data_approv_protest %>%
   group_by(survey_time, putin_support) %>%
   summarize(
-    share_approve_or_participate = mean(unauth_protest_approve == "approve", na.rm = TRUE),
+    share_approve_or_participate = mean(unauth_protest_approve == "approve", na.rm = F),
     total = n()
   )
 
@@ -630,6 +833,7 @@ plot1 <- ggplot(plot1_data, aes(x = survey_time, y = share_approve_or_participat
   ) +
   scale_y_continuous(labels = scales::percent) +
   theme_minimal()
+
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/share_approve_participate_unauthorised.png", plot = plot1, width = 10, height = 6, dpi = 300)
 
 
@@ -642,28 +846,71 @@ data_justified_repressions <- bind_rows(
   mutate(
     justified_protest_permission = case_when(
       protest_permition == 1 ~ "not justified",
+      protest_permition == "Полностью не оправдано" ~ "not justified",
+      protest_permition == "Скорее не оправдано" ~ "not justified",
       protest_permition == 2 ~ "justified",
-      TRUE ~ NA_character_
+      protest_permition == "Совершенно оправданно" ~ "justified",
+      protest_permition == "Скорее оправданно" ~ "justified",
+      TRUE ~ "no_answer"
     ),
     justified_arrest_participants = case_when(
       arrest_participants == 1 ~ "not justified",
+      arrest_participants == "Полностью не оправдано" ~ "not justified",
+      arrest_participants == "Скорее не оправдано" ~ "not justified",
       arrest_participants == 2 ~ "justified",
-      TRUE ~ "NA"
+      arrest_participants == "Совершенно оправданно" ~ "justified",
+      arrest_participants == "Скорее оправданно" ~ "justified",
+      TRUE ~ "no_answer"
     ),
     putin_support = case_when(
       putin_support == 1 ~ "approve",
       putin_support == 2 ~ "disapprove",
-      TRUE ~ NA_character_
+      putin_support == "Одобряю" ~ "approve",
+      putin_support == "Не одобряю" ~ "disapprove",
+      putin_support == "Одобряю  " ~ "approve",
+      putin_support == "Не одобряю  " ~ "disapprove",
+      T ~ NA
     ),
     survey_time = factor(survey_time, levels = c("December 2021", "August 2023", "April 2024", "July 2024"))
-  ) %>%
-  filter(!is.na(justified_protest_permission) & !is.na(justified_arrest_participants) & !is.na(putin_support))
+  ) 
+
+
+unique(data_justified_repressions$justified_protest_permission)
+
+# NA report
+report_no_answer_repressions <- data_justified_repressions %>%
+  group_by(survey_time) %>%
+  summarize(
+    no_answer_protest_permission = mean(justified_protest_permission == "no_answer", na.rm = TRUE) * 100,
+    no_answer_arrest_participants = mean(justified_arrest_participants == "no_answer", na.rm = TRUE) * 100,
+    no_answer_putin = mean(is.na(putin_support), na.rm = TRUE) * 100
+  )
+
+plot_na_perm_arrest <- ggplot(report_no_answer_repressions, aes(x = survey_time)) +
+  geom_line(aes(y = no_answer_protest_permission, color = "No Answer - Protest Permission", group = 1), size = 1) +
+  geom_line(aes(y = no_answer_arrest_participants, color = "No Answer - Arrest Participants", group = 2), size = 1) +
+  geom_line(aes(y = no_answer_putin, color = "No Answer - Putin", group = 3), size = 1) +
+  geom_point(aes(y = no_answer_protest_permission, color = "No Answer - Protest Permission"), size = 3) +
+  geom_point(aes(y = no_answer_arrest_participants, color = "No Answer - Arrest Participants"), size = 3) +
+  geom_point(aes(y = no_answer_putin, color = "No Answer - Putin"), size = 3) +
+  labs(
+    title = "Shares of 'No Answer' for Justified Protest Permission, Arrest Participants, and NA for Putin Support",
+    x = "Survey Time",
+    y = "Percentage",
+    color = "Response Type"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/na_permis_arrest.png", plot = plot_na_perm_arrest, width = 10, height = 6, dpi = 300)
+
+
 
 # Calculate the shares for protest permission
 plot2_data_permission <- data_justified_repressions %>%
   group_by(survey_time, putin_support) %>%
   summarize(
-    share_not_justified_permission = mean(justified_protest_permission == "not justified", na.rm = TRUE)
+    share_not_justified_permission = mean(justified_protest_permission == "not justified", na.rm = F)
   )
 
 
@@ -671,7 +918,7 @@ plot2_data_permission <- data_justified_repressions %>%
 plot3_data_arrest <- data_justified_repressions %>%
   group_by(survey_time, putin_support) %>%
   summarize(
-    share_not_justified_arrest = mean(justified_arrest_participants == "not justified", na.rm = TRUE)
+    share_not_justified_arrest = mean(justified_arrest_participants == "not justified", na.rm = F)
   )
 
 
