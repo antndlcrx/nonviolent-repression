@@ -167,6 +167,35 @@ survey_july <- read_xlsx("data/surveys/survey_june_july.xlsx")[-1,] %>%
     )
 
 
+
+survey_sept <- read_xlsx("data/surveys/survey_sept_24.xlsx")
+# clean data
+column_descriptions <- as.character(unlist(survey_feb[1, ]))
+names(column_descriptions) <- names(survey_feb)
+# example, call: column_descriptions["Q1"]
+# remove first row
+survey_sept <- survey_sept[-1,]
+survey_sept <- survey_sept %>%
+  mutate(university_education = case_when(
+      Q5 %in% uni_education ~ "BA+",
+      TRUE ~ "BA-"),
+      gender = fct_recode(Q4,
+                             "Man"= "Мужской",
+                             "Woman" = "Женский"),
+      age = as.numeric(Q1),
+      age_group = case_when(
+            as.numeric(Q1) %in% c(18:24) ~ '18-24',
+            as.numeric(Q1) %in% c(25:34) ~ '25-34',
+            as.numeric(Q1) %in% c(35:44) ~ '35-44',
+            as.numeric(Q1) %in% c(45:54) ~ '45-54',
+            as.numeric(Q1) %in% c(55:64) ~ '55-64',
+            as.numeric(Q1) >= 65 ~ '65+',
+            TRUE ~ NA),
+    )
+
+
+
+
 ru_population_frame <- read_csv("data/surveys/ru_population_frame.csv")[-c(1:3,16:18), -c(3,7)]
 
 wider_age_categories <- list(
@@ -278,13 +307,15 @@ shares_survey_march <- calculate_shares(survey_march, "Q. March")
 shares_survey_feb <- calculate_shares(survey_feb, "Q. February")
 shares_survey_aug <- calculate_shares(survey_aug, "Q. August")
 shares_survey_july <- calculate_shares(survey_july, "Q. July")
+shares_survey_sept <- calculate_shares(survey_sept, "Q. September")
 
 
 combined_shares <- bind_rows(shares_levada,
                              shares_survey_march,
                              shares_survey_feb,
                              shares_survey_aug,
-                             shares_survey_july) %>%
+                             shares_survey_july,
+                             shares_survey_sept) %>%
   pivot_wider(names_from = Survey, values_from = Share) %>% 
   mutate(Variable = case_when(
     Variable == "age_group" ~ "Age", # improve visibility
@@ -328,6 +359,12 @@ survey_jul_strata <- survey_july %>%
   mutate(proportion = count / nrow(survey_july),
          source = "July Survey")
 
+survey_sept_strata <- survey_sept %>% 
+  group_by(gender, age_group, university_education) %>% 
+  summarise(count = n()) %>%
+  mutate(proportion = count / nrow(survey_sept),
+         source = "September Survey")
+
 pop_strata <- ru_population_frame %>% 
   ungroup() %>% 
   mutate(proportion = Freq/sum(Freq),
@@ -335,7 +372,7 @@ pop_strata <- ru_population_frame %>%
 
 combined_strata <- combined_strata <- rbind(survey_march_strata, survey_feb_strata,
                                             survey_aug_strata, survey_jul_strata,
-                                            pop_strata) 
+                                            survey_sept_strata, pop_strata) 
 
 census_for_feb <- combined_strata %>% 
   filter(source == "Census 2020") %>% 
@@ -354,10 +391,10 @@ ggplot(combined_strata, aes(x = university_education,
   facet_grid(gender ~ age_group) +
   scale_color_manual(values = c("Census 2020" = "red", "March Survey" = "purple", 
                                 "February Survey" = "lightblue", "August Survey" = "darkgreen",
-                                "July Survey" = "blue")) +
+                                "July Survey" = "blue", "September Survey" = "black")) +
   scale_shape_manual(values = c("Census 2020" = 16,"March Survey" = 15,
                                 "February Survey" = 17, "August Survey" = 18,
-                                "July Survey" = 21)) +
+                                "July Survey" = 21, "September Survey" = 9)) +
   labs(x = "University Education", y = "Proportion", shape = "Source", color = "Source") +
   theme(legend.position = "bottom") +
   theme_bw()
@@ -531,6 +568,46 @@ kable(top_five_rows_jul, caption = "July Survey, Top Five Rows by Weight", align
 ```
 
 
+### September 
+```{r}
+## survey library ##
+unweighted_data <- svydesign(ids = ~1, data = survey_sept)
+
+
+weighted <- postStratify(unweighted_data, ~age_group + gender + university_education,
+             ru_population_frame, partial=TRUE)
+
+# save weights 
+survey_sept$weight_poststratify <- weights(weighted)
+
+sum_sept <- round(summary(weights(weighted)), 2)
+
+sum_sept_mat <-  matrix(as.numeric(sum_sept), nrow = 1, 
+                          dimnames = list(c("Value"),
+                          names(sum_sept)
+                          )
+                          )
+
+kable(sum_sept_mat, 
+      caption = "August Survey PostStratify Weights Summary", 
+      align = 'c', 
+      format = "markdown")
+```
+
+The September survey is skewed towards younger people, the share of older people in the survey is much smaller than in the population as recorded by the 2020 census. People aged 65+ have the highest survey weight.
+
+```{r}
+top_five_rows_sept <- survey_sept  %>%
+  distinct(weight_poststratify, .keep_all = TRUE) %>% 
+  arrange(desc(weight_poststratify)) %>% 
+  select(age_group, gender, university_education, weight_poststratify)%>% 
+  head(5)
+
+kable(top_five_rows_sept, caption = "September Survey, Top Five Rows by Weight", align = 'c')
+```
+
+
+
 \newpage
 
 ```{r, echo=FALSE, fig.height=8, fig.width=12}
@@ -550,16 +627,21 @@ survey_jul_selected <- survey_july %>%
   mutate(Survey = 'July') %>%
   select(weight_poststratify, Survey)
 
+survey_sept_selected <- survey_sept %>%
+  mutate(Survey = 'September') %>%
+  select(weight_poststratify, Survey)
+
 combined_weights <- rbind(survey_march_selected, survey_feb_selected,
-                          survey_aug_selected, survey_jul_selected)
+                          survey_aug_selected, survey_jul_selected, survey_sept_selected)
 
 ggplot(combined_weights, aes(x = weight_poststratify, fill = Survey)) +
   geom_histogram(data = subset(combined_weights, Survey == 'March'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'August'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'July'), bins = 100, alpha = 0.5, color = "black") +
+  geom_histogram(data = subset(combined_weights, Survey == 'September'), bins = 100, alpha = 0.5, color = "black") +
   scale_fill_manual(values = c("March" = "lightblue", "February" = "blue", "August" = "red",
-                               "July" = "green")) +
+                               "July" = "green", "September" = "black")) +
   theme_minimal() +
   labs(title = "Distribution of Weights by Survey",
        x = "Weight",
@@ -597,7 +679,14 @@ plot_jul <- ggplot(survey_jul_selected, aes(x = weight_poststratify)) +
        x = "Weight",
        y = "Frequency")
 
-grid.arrange(plot_march, plot_feb, plot_aug, plot_jul, ncol = 2, top = "Distribution of Weights Across Months")
+plot_sept <- ggplot(survey_sept_selected, aes(x = weight_poststratify)) +
+  geom_histogram(bins = 100, fill = "black", color = "black", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+       x = "Weight",
+       y = "Frequency")
+
+grid.arrange(plot_march, plot_feb, plot_aug, plot_jul, plot_sept, ncol = 2, top = "Distribution of Weights Across Months")
 ```
 
 
@@ -729,6 +818,36 @@ kable(sum_man_jul_mat,
       format = "markdown")
 ```
 
+### September 
+
+```{r}
+# calculate weights and print the df with weights
+weights_sept_strata_man <- left_join(survey_sept_strata,
+                            pop_strata,
+                            c("gender", "age_group", "university_education")) %>% 
+  rename(population_proportion = proportion.y,
+         sample_proportion = proportion.x)  %>% 
+  # calculate weights as popul prop/sample prop
+  mutate(weight = population_proportion / sample_proportion)
+
+sum_man_sept <- round(summary(weights_sept_strata_man$weight), 2)
+
+sum_man_sept_mat <-  matrix(as.numeric(sum_man_sept), nrow = 1, 
+                          dimnames = list(c("Value"),
+                          names(sum_man_sept)
+                          )
+                          )
+
+survey_sept <- survey_sept %>%
+  left_join(weights_sept_strata_man, by = c("age_group", "gender", "university_education")) %>%
+  rename(weight_manually_calculated = weight) 
+
+kable(sum_man_sept_mat, 
+      caption = "September Survey Weights Summary", 
+      align = 'c', 
+      format = "markdown")
+```
+
 
 
 \newpage
@@ -750,16 +869,21 @@ weights_jul_strata_man <- weights_jul_strata_man %>%
   mutate(Survey = 'July') %>%
   select(weight, Survey,  age_group, gender, university_education)
 
+weights_sept_strata_man <- weights_sept_strata_man %>%
+  mutate(Survey = 'September') %>%
+  select(weight, Survey,  age_group, gender, university_education)
+
 combined_weights <- rbind(weights_march_strata_man, weights_feb_strata_man,
-                          weights_aug_strata_man, weights_jul_strata_man)
+                          weights_aug_strata_man, weights_jul_strata_man, weights_sept_strata_man)
 
 ggplot(combined_weights, aes(x = weight, fill = Survey)) +
   geom_histogram(data = subset(combined_weights, Survey == 'February'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'August'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'March'), bins = 100, alpha = 0.5, color = "black") +
   geom_histogram(data = subset(combined_weights, Survey == 'July'), bins = 100, alpha = 0.5, color = "black") +
+  geom_histogram(data = subset(combined_weights, Survey == 'September'), bins = 100, alpha = 0.5, color = "black") +
   scale_fill_manual(values = c("February" = "blue", "August" = "red", "March" = "lightblue", 
-                               "July" = "green")) +
+                               "July" = "green", "September" = "black")) +
   theme_minimal() +
   labs(title = "Distribution of Weights by Survey",
        x = "Weight",
@@ -789,7 +913,12 @@ plot_july <- ggplot(weights_jul_strata_man, aes(x = weight)) +
   theme_minimal() +
   labs(x = "Weight", y = "Frequency")
 
-grid.arrange(plot_feb, plot_aug, plot_march, plot_july, ncol = 2, top = "Distribution of Weights Across Months")
+plot_sept <- ggplot(weights_sept_strata_man, aes(x = weight)) +
+  geom_histogram(bins = 100, fill = "black", color = "black", alpha = 0.5) +
+  theme_minimal() +
+  labs(x = "Weight", y = "Frequency")
+
+grid.arrange(plot_feb, plot_aug, plot_march, plot_july, plot_sept, ncol = 2, top = "Distribution of Weights Across Months")
 ```
 
 Calculating weights this way gives us the same overall picture. The main difference is in the orders of magnitude between the median weight and the tail (highest weight). 
@@ -967,6 +1096,6 @@ stargazer(models,
 
 
 ```{r}
-# write_csv(survey_july, "data/surveys/survey_july_with_weights.csv")
+# write_csv(survey_sept, "data/surveys/survey_sept_2024_with_weights.csv")
 ```
 
