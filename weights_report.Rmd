@@ -6,6 +6,9 @@ output:
   pdf_document:
     latex_engine: lualatex
     toc: True
+header-includes:
+  - \usepackage{float}
+  - \floatplacement{table}{H}
 ---
 
 ```{r setup, include=FALSE}
@@ -21,7 +24,7 @@ Sys.setlocale("LC_ALL", "Russian")
 ##### Set Up #####
 pacman::p_load(tidyverse, readr, broom, 
                lubridate, gt, gtsummary, survey, readxl,
-               gridExtra, knitr, haven, nnet, stargazer)
+               gridExtra, knitr, haven, nnet, stargazer, kableExtra)
 
 
 # categories for education
@@ -276,6 +279,7 @@ calculate_shares <- function(dataset, dataset_name) {
 
 ```
 
+\newpage
 ## Introduction
 
 To create weights for all surveys, we are working with the 2020
@@ -290,30 +294,28 @@ kable(head(ru_population_frame, 5),
       format = "markdown")
 ```
 
-
-
 ## Sample to Population Comparison
 
-To compare our samples to the population, we do two comparisons. First, we compare them to a nationally representative Levada omnibus survey. Second, we compare them to the 2020 Census. 
+To compare our samples to the population, we do two comparisons. First, we compare them to a nationally representative Levada omnibus survey which was fielded in March 2024. Second, we compare them to the 2020 Census. 
 
 The Table \ref{tab:omnibus_shares} compares the demographic
 composition of Qualtrics samples collected in August, February, and March to nationally representative Levada Omnibus survey.
 
-\newpage
+
 
 ```{r}
 shares_levada <- calculate_shares(levada_omnibus, "Levada")
-shares_survey_march <- calculate_shares(survey_march, "Q. March")
-shares_survey_feb <- calculate_shares(survey_feb, "Q. February")
-shares_survey_aug <- calculate_shares(survey_aug, "Q. August")
-shares_survey_july <- calculate_shares(survey_july, "Q. July")
-shares_survey_sept <- calculate_shares(survey_sept, "Q. September")
+shares_survey_march <- calculate_shares(survey_march, "Q. March 2024")
+shares_survey_feb <- calculate_shares(survey_feb, "Q. February 2024")
+shares_survey_aug <- calculate_shares(survey_aug, "Q. August 2023")
+shares_survey_july <- calculate_shares(survey_july, "Q. July 2024")
+shares_survey_sept <- calculate_shares(survey_sept, "Q. September 2024")
 
 
 combined_shares <- bind_rows(shares_levada,
-                             shares_survey_march,
-                             shares_survey_feb,
                              shares_survey_aug,
+                             shares_survey_feb,
+                             shares_survey_march,
                              shares_survey_july,
                              shares_survey_sept) %>%
   pivot_wider(names_from = Survey, values_from = Share) %>% 
@@ -324,10 +326,51 @@ combined_shares <- bind_rows(shares_levada,
     TRUE ~ Variable # default case to leave the variable name as it is
   ))
 
+
+n_levada <- as.integer(nrow(levada_omnibus))
+n_march <- as.integer(nrow(survey_march))
+n_feb <- as.integer(nrow(survey_feb))
+n_aug <- as.integer(nrow(survey_aug))
+n_july <- as.integer(nrow(survey_july))
+n_sept <- as.integer(nrow(survey_sept))
+
+# observations_row <- tibble(
+#   Variable = "Number of Observations",
+#   `Values` = "",
+#   `Levada` = n_levada,
+#   `Q. August 2023` = n_aug,
+#   `Q. February 2024` = n_feb,
+#   `Q. March 2024` = n_march,
+#   `Q. July 2024` = n_july,
+#   `Q. September 2024` = n_sept
+# )
+# 
+# combined_shares <- bind_rows(combined_shares, observations_row)
+# 
+# 
+
+# Modify column names to include number of observations
+colnames(combined_shares) <- c(
+  "Variable", 
+  "Values",
+  paste0("Levada (N=", n_levada, ")"),
+  paste0("Aug 23 (N=", n_aug, ")"),
+  paste0("Feb 24 (N=", n_feb, ")"),
+  paste0("March 24 (N=", n_march, ")"),
+  paste0("July 24 (N=", n_july, ")"),
+  paste0("Sept 24 (N=", n_sept, ")")
+)
+
 kable(combined_shares, caption = "Comparison of Category Shares by Variable\\label{tab:omnibus_shares}",
       align = "c",
-      format = "markdown")
+      format = "latex", booktabs = TRUE)%>%
+  kable_styling(full_width = T, latex_options = "scale_down") %>%
+  column_spec(1, width = "2.5cm") %>%  
+  column_spec(2, width = "2.5cm") %>%  
+  column_spec(3:ncol(combined_shares), width = "1.5cm")
+
 ```
+
 
 \newpage
 
@@ -406,7 +449,7 @@ The main observations are:
 - The biggest disparities are is women 55-64 and 65+ without education. For instance, the February survey has `r nrow(survey_feb %>% filter(gender == "Woman" & age >= 65 & university_education == "BA+"))` women in the latter category. 
 - We have oversampled young women, especially 25-34 years old with university education, and undersampled men without university education across all age categories except 55- and 65+. 
 
-
+\newpage
 ## Weights with Survey package
 
 To compute post-stratification weights we rely on the `postStratify` function from the `survey` package. The function adjusts the sampling and replicate weights so that the joint distribution of a set of
@@ -446,7 +489,8 @@ top_five_rows_march <- survey_march  %>%
   select(age_group, gender, university_education, weight_poststratify)%>% 
   head(5)
 
-kable(top_five_rows_march, caption = "March Survey, Top Five Rows by Weight", align = 'c')
+kable(top_five_rows_march, caption = "March Survey, Top Five Rows by Weight", align = 'c',
+      format = "markdown")
 ```
 
 
@@ -485,7 +529,8 @@ top_five_rows_feb <- survey_feb %>%
   select(age_group, gender, university_education, weight_poststratify) %>%
   slice_head(n = 5)
 
-kable(top_five_rows_feb, caption = "February Survey, Top Five Rows by Unique Weight", align = 'c')
+kable(top_five_rows_feb, caption = "February Survey, Top Five Rows by Unique Weight", align = 'c', 
+      format = "markdown")
 
 ```
 
@@ -527,7 +572,8 @@ top_five_rows_aug <- survey_aug  %>%
   select(age_group, gender, university_education, weight_poststratify)%>% 
   head(5)
 
-kable(top_five_rows_aug, caption = "August Survey, Top Five Rows by Weight", align = 'c')
+kable(top_five_rows_aug, caption = "August Survey, Top Five Rows by Weight", align = 'c', 
+      format = "markdown")
 ```
 
 ### July
@@ -564,10 +610,11 @@ top_five_rows_jul <- survey_july  %>%
   select(age_group, gender, university_education, weight_poststratify)%>% 
   head(5)
 
-kable(top_five_rows_jul, caption = "July Survey, Top Five Rows by Weight", align = 'c')
+kable(top_five_rows_jul, caption = "July Survey, Top Five Rows by Weight", align = 'c',  
+      format = "markdown")
 ```
 
-
+\newpage
 ### September 
 ```{r}
 ## survey library ##
@@ -603,7 +650,8 @@ top_five_rows_sept <- survey_sept  %>%
   select(age_group, gender, university_education, weight_poststratify)%>% 
   head(5)
 
-kable(top_five_rows_sept, caption = "September Survey, Top Five Rows by Weight", align = 'c')
+kable(top_five_rows_sept, caption = "September Survey, Top Five Rows by Weight", align = 'c',  
+      format = "markdown")
 ```
 
 
@@ -689,7 +737,7 @@ plot_sept <- ggplot(survey_sept_selected, aes(x = weight_poststratify)) +
 grid.arrange(plot_march, plot_feb, plot_aug, plot_jul, plot_sept, ncol = 2, top = "Distribution of Weights Across Months")
 ```
 
-
+\newpage
 ## Weights created manually
 To check the plausibility of resulting weights, we create alternative weights based on the population frequencies of the combination of the same strata (Yana's approach). The weights are calculated for each category:
 \[ \text{weight}_i = \frac{\text{population frequency}_i}{\text{sample frequency}_i} \]
