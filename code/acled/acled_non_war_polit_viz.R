@@ -199,7 +199,7 @@ monthly_share_plot_polit_violence <- ggplot(monthly_shares_violence, aes(x = mon
     labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
     expand = c(0, 0)
   ) +
-  scale_linetype_manual(values = c("political" = "solid", "Other" = "dotdash"))+
+  scale_linetype_manual(values = c("political" = "solid", "Other" = "dashed"))+
   labs(title = "Monthly Share of Protest Events Facing Police Violence",
        x = "",
        y = "Share of Protests",
