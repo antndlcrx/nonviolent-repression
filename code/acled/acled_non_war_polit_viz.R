@@ -20,7 +20,11 @@ acled_subset_for_plot <- acled %>%
                              TRUE ~ "Other"),
          protest_type = case_when(
                                   pred_labels == "cultural" | pred_labels == "legal" ~ "cultural/legal",
-                                  TRUE ~ pred_labels)) 
+                                  TRUE ~ pred_labels),
+         political_bin = case_when(
+           protest_type=="political" | protest_type=="war_anti" | protest_type=="war_pro" ~ "political",
+           T ~ "Other"
+         )) 
 
 # acled_subset_for_plot %>% group_by(protest_type) %>% summarise(n())
 # acled_subset_for_plot %>% group_by(pred_labels) %>% summarise(n())
@@ -63,7 +67,7 @@ monthly_n_plot_type <- ggplot(unique_counts_type, aes(x = month, y = num_protest
 monthly_n_plot_type
 
 
-##### What is war anto protest before 2022
+##### What is war anti protest before 2022
 
 event <- acled %>%
   filter(date <= '2021-01-01') %>% 
@@ -169,6 +173,70 @@ monthly_share_plot_pol_war_all <- ggplot(monthly_share, aes(x = month)) +
 
 monthly_share_plot_pol_war_all
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/share_political_war_of_all_types.png", plot = monthly_share_plot_pol_war_all, width = 10, height = 6, dpi = 300)
+
+
+#### Share of protests facing arrests ####
+
+monthly_shares_violence <- acled_subset_for_plot %>%
+  filter(pro_gov != "Pro Government") %>%
+  group_by(month, political_bin) %>%
+  summarise(total_events = n()) %>%
+  left_join(
+    acled_subset_for_plot %>%
+      filter(pro_gov != "Pro Government", police_violence == "1") %>%
+      group_by(month, political_bin) %>%
+      summarise(violent_events = n()),
+    by = c("month", "political_bin")
+  ) %>%
+  mutate(share_violent = violent_events / total_events * 100) %>%
+  replace_na(list(share_violent = 0))
+
+monthly_share_plot_polit_violence <- ggplot(monthly_shares_violence, aes(x = month, y = share_violent, linetype = political_bin, group = political_bin)) +
+  geom_line() +  
+  geom_point() +  
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  scale_linetype_manual(values = c("political" = "solid", "Other" = "dotdash"))+
+  labs(title = "Monthly Share of Protest Events Facing Police Violence",
+       x = "",
+       y = "Share of Protests",
+       linetype = "Protest Type") + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6.5)) +
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = 60, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = 60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/monthly_share_plot_polit_violence.png", plot = monthly_share_plot_polit_violence, width = 10, height = 6, dpi = 300)
+
+
+
+monthly_share_plot_violence_protests <- ggplot(monthly_shares_violence, aes(x = month)) +
+  geom_line(aes(y = political_share, linetype  = "Political")) +
+  geom_line(aes(y = war_anti_share, linetype  = "War-Anti")) +
+  scale_x_date(
+    date_breaks = "1 month",
+    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    expand = c(0, 0)
+  ) +
+  labs(title = "Monthly Share of Protest Types",
+       x = "",
+       y = "Share of Total Protests",
+       color = "Protest Type") + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6.5)) +
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = .60, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = .60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
+
+monthly_share_plot_pol_war_all
+
+
 
 ##### Explore Political 
 

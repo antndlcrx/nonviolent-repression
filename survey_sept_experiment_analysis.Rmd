@@ -151,18 +151,18 @@ test_rand_actions <- glm(factor(protest_actions) ~ age + gender + university_edu
 test_rand_authorisation <- glm(factor(authorisation) ~ age + gender + university_education,
                  family=binomial, data=long_data)
 
-stargazer(test_rand_type,test_rand_actions, test_rand_authorisation,
-          header=FALSE,
-          title="Randomisation Check",
-          digits=2)
+# stargazer(test_rand_type,test_rand_actions, test_rand_authorisation,
+#           header=FALSE,
+#           title="Randomisation Check",
+#           digits=2)
+
+summary(test_rand_type)
 ```
 
 \newpage
 ## Protest Type Effect on Support of Protesters' Actions
 
 ```{r plot means protst type}
-# m1 <- lm(as.numeric(factor(authorisation)) ~ protest_type, data)
-# summary(m1)
 
 ggplot(data, aes(x = support_protesters_numeric, fill = protest_type)) +
   geom_histogram(alpha = 0.5, position = "dodge", bins = 30) +
@@ -194,7 +194,10 @@ group2 <- data %>%
   pull(support_protesters_numeric)
 
 # t.test(group1, group2)
-# mean(group1, na.rm=T) - mean(group2, na.rm=T)
+mean(group1, na.rm=T) - mean(group2, na.rm=T)
+
+# m1 <- lm(support_protesters_numeric ~ protest_type, data)
+# summary(m1)
 ```
 * The difference between mean support of protesters actions is `r mean(group1, na.rm=T) - mean(group2, na.rm=T)`, which is our effect of interest here.  
 
@@ -235,8 +238,8 @@ group2 <- data %>%
   filter(authorisation == "unauthorised") %>%
   pull(support_protesters_demands_numeric)
 
-# t.test(group1, group2)
-# mean(group1, na.rm=T) - mean(group2, na.rm=T)
+t.test(group1, group2)
+mean(group1, na.rm=T) - mean(group2, na.rm=T)
 
 ```
 * The difference between mean support of protesters actions is `r mean(group1, na.rm=T) - mean(group2, na.rm=T)`, which is our effect of interest here. Difference in means is significantly different from zero. 
