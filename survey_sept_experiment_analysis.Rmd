@@ -74,6 +74,16 @@ long_data <- survey_sept %>%
       #support_protesters_actions == "Отказ от ответа" ~ 6,
       TRUE ~ NA_real_ # Turn refuse to NA (no NAs in the data before transformation)
     ),
+    support_protesters_binary = case_when(
+      support_protesters_actions == "Oпределенно, не одобряю" ~ 0,
+      support_protesters_actions == "Cкорее, не одобряю" ~ 0,
+      support_protesters_actions == "Cкорее, одобряю" ~ 1,
+      support_protesters_actions == "Определенно, одобряю" ~ 1,
+      
+      support_protesters_actions == "Затрудняюсь ответить" ~ 0,
+      support_protesters_actions == "Отказ от ответа" ~ 0,
+      TRUE ~ NA_real_ # Turn refuse to NA (no NAs in the data before transformation)
+    ),
     ### Support Protesters' Demands ###
     support_protesters_demands = str_trim(DV1A),
     support_protesters_demands_numeric = case_when(
@@ -84,6 +94,16 @@ long_data <- survey_sept %>%
       
       #support_protesters_demands == "Затрудняюсь ответить" ~ 5,
       #support_protesters_demands == "Отказ от ответа" ~ 6,
+      TRUE ~ NA_real_ # Turn refuse to NA (no NAs in the data before transformation)
+    ),
+    support_protesters_demands_binary = case_when(
+      support_protesters_demands == "Oпределенно, не одобряю" ~ 0,
+      support_protesters_demands == "Cкорее, не одобряю" ~ 0,
+      support_protesters_demands == "Cкорее, одобряю" ~ 1,
+      support_protesters_demands == "Определенно, одобряю" ~ 1,
+      
+      support_protesters_demands == "Затрудняюсь ответить" ~ 0,
+      support_protesters_demands == "Отказ от ответа" ~ 0,
       TRUE ~ NA_real_ # Turn refuse to NA (no NAs in the data before transformation)
     ),
     ### Support Arrests ### 
@@ -100,19 +120,23 @@ long_data <- survey_sept %>%
     support_arrests == "8" ~ 8,
     support_arrests == "9" ~ 9,
     support_arrests == "10 (полностью оправданно)" ~ 10,
-    # support_arrests == "Затрудняюсь ответить" ~ 11,
-    # support_arrests == "Отказ от ответа" ~ 12,
+    support_arrests == "Затрудняюсь ответить" ~ 0,
+    support_arrests == "Отказ от ответа" ~ 0,
     TRUE ~ NA_real_
+  ),
+  support_arrests_binary = case_when(
+    support_arrests_num <=5 ~ 0,
+    support_arrests_num > 5 ~ 1,
   ),
     ### Protesters' Description ###
     across(
     c(aggressive, lawabiding, trustworthy, dangerous, think_about_me),  # List of the variables to transform
     ~ case_when(
-      str_trim(.) == "Абсолютно не применимо" ~ 1,
-      str_trim(.) == "Скорее не применимо" ~ 2,
-      str_trim(.) == "Частично применимо" ~ 3,
-      str_trim(.) == "Полностью применимо" ~ 4,
-      TRUE ~ NA_real_  # Treat any other response as NA
+      str_trim(.) == "Абсолютно не применимо" ~ 0,
+      str_trim(.) == "Скорее не применимо" ~ 0,
+      str_trim(.) == "Частично применимо" ~ 1,
+      str_trim(.) == "Полностью применимо" ~ 1,
+      TRUE ~ 0  # Treat any other response as 0
     ),
     .names = "protesters_are_{col}"  # New variable naming pattern
   ),
@@ -121,11 +145,11 @@ long_data <- survey_sept %>%
   across(c(is_violent, is_lawabiding, is_lifethreatening),  # List of the variables to transform,
   
     ~ case_when(
-      str_trim(.) == "Нет" ~ 1,
-      str_trim(.) == "Скорее нет" ~ 2,
-      str_trim(.) == "Скорее да" ~ 3,
-      str_trim(.) == "Да" ~ 4,
-      TRUE ~ NA_real_  # Treat any other response as NA
+      str_trim(.) == "Нет" ~ 0,
+      str_trim(.) == "Скорее нет" ~ 0,
+      str_trim(.) == "Скорее да" ~ 1,
+      str_trim(.) == "Да" ~ 1,
+      TRUE ~ 0  # Treat any other response as 0
     )
     )
   ) 
@@ -134,7 +158,8 @@ data <- long_data %>% select(c(support_arrests, support_arrests_num, support_pro
                  support_protesters_demands_numeric, protest_type, protest_actions, authorisation, protesters_are_aggressive, protesters_are_lawabiding,
                  protesters_are_trustworthy, protesters_are_think_about_me,
                  protesters_are_dangerous, is_violent, is_lawabiding, is_lifethreatening,
-                 weight_manually_calculated))
+                 weight_manually_calculated, support_arrests_binary,
+                 support_protesters_demands_binary, support_protesters_binary))
 
 ```
 
@@ -151,12 +176,12 @@ test_rand_actions <- glm(factor(protest_actions) ~ age + gender + university_edu
 test_rand_authorisation <- glm(factor(authorisation) ~ age + gender + university_education,
                  family=binomial, data=long_data)
 
-# stargazer(test_rand_type,test_rand_actions, test_rand_authorisation,
-#           header=FALSE,
-#           title="Randomisation Check",
-#           digits=2)
+stargazer(test_rand_type,test_rand_actions, test_rand_authorisation,
+          header=FALSE,
+          title="Randomisation Check",
+          digits=2)
 
-summary(test_rand_type)
+# summary(test_rand_type)
 ```
 
 \newpage
@@ -164,9 +189,9 @@ summary(test_rand_type)
 
 ```{r plot means protst type}
 
-ggplot(data, aes(x = support_protesters_numeric, fill = protest_type)) +
-  geom_histogram(alpha = 0.5, position = "dodge", bins = 30) +
-  labs(title = "Distribution of Support Protesters' Actions by Protest Type",
+ggplot(data, aes(x = factor(support_protesters_binary), fill = protest_type)) +
+  geom_bar(alpha=0.65, position = "dodge") +
+  labs(title = "Distribution of Support Protesters' Actions (binary) by Protest Type",
        x = "Support Protesters Numeric",
        y = "Count") +
   scale_fill_manual(values = c("blue", "red")) + # Customize the colors as needed
@@ -174,7 +199,7 @@ ggplot(data, aes(x = support_protesters_numeric, fill = protest_type)) +
 ```
 
 
-* The variable "support for protesters' actions" has `r sum(is.na(data$support_protesters_numeric))` missing values. 
+* The variable "support for protesters' actions" has `r sum(is.na(data$support_protesters_numeric))` missing values. **Missing values are treated as disagreement (lack of support)**.
 
 ```{r env pol case}
 
@@ -187,22 +212,22 @@ ggplot(data, aes(x = support_protesters_numeric, fill = protest_type)) +
 ```{r ttest protst type}
 group1 <- data %>%
   filter(protest_type == "environmental") %>%
-  pull(support_protesters_numeric)
+  pull(support_protesters_binary)
 
 group2 <- data %>%
   filter(protest_type == "political") %>%
-  pull(support_protesters_numeric)
+  pull(support_protesters_binary)
 
 # t.test(group1, group2)
-mean(group1, na.rm=T) - mean(group2, na.rm=T)
-
-# m1 <- lm(support_protesters_numeric ~ protest_type, data)
+# mean(group1, na.rm=T) - mean(group2, na.rm=T)
+# 
+# m1 <- lm(support_protesters_binary ~ protest_type, data)
 # summary(m1)
 ```
-* The difference between mean support of protesters actions is `r mean(group1, na.rm=T) - mean(group2, na.rm=T)`, which is our effect of interest here.  
+* The difference between mean support of protesters actions is `r mean(group1, na.rm=T) - mean(group2, na.rm=T)` (2.8 standard errors away from zero), which is our effect of interest here.  
 
 ```{r plot means type}
-plotmeans(formula = support_protesters_numeric ~ protest_type,  # 
+plotmeans(formula = support_protesters_binary ~ protest_type,  # 
              data = data,           # the data frame
              xlab = "Protest type",  # x-axis label
              ylab = "Support for protesters' activities",          # y-axis label
@@ -219,9 +244,9 @@ plotmeans(formula = support_protesters_numeric ~ protest_type,  #
 ## Authorisation Effect on Support of Protesters' Demands
 
 ```{r plot means authorised}
-ggplot(data, aes(x = support_protesters_demands_numeric, fill = authorisation)) +
-  geom_histogram(alpha = 0.5, position = "dodge", bins = 30) +
-  labs(title = "Distribution of Support Protesters' Demands by Protest Authorisation",
+ggplot(data, aes(x = support_protesters_demands_binary, fill = authorisation)) +
+  geom_bar(alpha = 0.65, position = "dodge") +
+  labs(title = "Distribution of Support Protesters' Demands (binary) by Protest Authorisation",
        x = "Support Protesters Numeric",
        y = "Count") +
   scale_fill_manual(values = c("blue", "red")) + # Customize the colors as needed
@@ -232,20 +257,20 @@ ggplot(data, aes(x = support_protesters_demands_numeric, fill = authorisation)) 
 ```{r ttest protst authorisation}
 group1 <- data %>%
   filter(authorisation == "authorised") %>%
-  pull(support_protesters_demands_numeric)
+  pull(support_protesters_demands_binary)
 
 group2 <- data %>%
   filter(authorisation == "unauthorised") %>%
-  pull(support_protesters_demands_numeric)
+  pull(support_protesters_demands_binary)
 
-t.test(group1, group2)
-mean(group1, na.rm=T) - mean(group2, na.rm=T)
+# t.test(group1, group2)
+# mean(group1, na.rm=T) - mean(group2, na.rm=T)
 
 ```
-* The difference between mean support of protesters actions is `r mean(group1, na.rm=T) - mean(group2, na.rm=T)`, which is our effect of interest here. Difference in means is significantly different from zero. 
+* The difference between mean support of protesters actions for authorised vs unautorised is `r mean(group1, na.rm=T) - mean(group2, na.rm=T)` (t=2.56), which is our effect of interest here. Difference in means is significantly different from zero. 
 
 ```{r plot diff authorisation demands}
-plotmeans(formula = support_protesters_demands_numeric ~ authorisation,  # 
+plotmeans(formula = support_protesters_demands_binary ~ authorisation,  # 
              data = data,           # the data frame
              xlab = "Protest type",  # x-axis label
              ylab = "Support for protesters' demands",          # y-axis label
@@ -261,9 +286,9 @@ plotmeans(formula = support_protesters_demands_numeric ~ authorisation,  #
 * Weighting by population size of key strata (gender x education x age_group) makes protest type significant and increases magnitude of the effects.
 
 ```{r}
-m_arrests <- lm(support_arrests_num ~ factor(authorisation)*factor(protest_type) + factor(protest_actions), data = data)
+m_arrests <- lm(support_arrests_binary ~ factor(authorisation)*factor(protest_type) + factor(protest_actions), data = data)
 
-m_arrests_w <- lm(support_arrests_num ~ factor(authorisation)*factor(protest_type) + factor(protest_actions), data = data, weights = weight_manually_calculated)
+m_arrests_w <- lm(support_arrests_binary ~ factor(authorisation)*factor(protest_type) + factor(protest_actions), data = data, weights = weight_manually_calculated)
 # summary(m_arrests)
 ```
 
@@ -271,7 +296,7 @@ m_arrests_w <- lm(support_arrests_num ~ factor(authorisation)*factor(protest_typ
 ```{r}
 stargazer(m_arrests, m_arrests_w,
           header=FALSE,
-          title="Arrests are justified",
+          title="Arrests are justified (Linear Prob. Model, Binary Outcome)",
           digits=2,
           dep.var.labels = c("support arrests", "support arrests (w)"))
 ```
@@ -299,7 +324,7 @@ models = list(m_aggressive, m_lawabiding, m_trustworthy,m_think_about_me, m_dang
 
 stargazer(models,
           header=FALSE,
-          title="Protesters Described As",
+          title="Protesters Described As...(Linear Prob. Model for Binary Outcome)",
           digits=2,
           no.space = TRUE,
           dep.var.labels = c("Aggressive", "Law Abiding", "Trustworthy", "Think about Me",
@@ -328,7 +353,7 @@ models = list(m_aggressive, m_lawabiding, m_trustworthy,m_think_about_me, m_dang
 
 stargazer(models,
           header=FALSE,
-          title="Protesters Described As (Weighted)",
+          title="Protesters Described As...(Linear Prob. Model for Binary Outcome. Weighted)",
           digits=2,
           no.space = TRUE,
           dep.var.labels = c("Aggressive", "Law Abiding", "Trustworthy", "Think about Me",
@@ -355,7 +380,7 @@ models2 = list(m_violent, m_lawabiding_protest, m_is_lifethreatening)
 
 stargazer(models2,
           header=FALSE,
-          title="Protest Described As",
+          title="Protest Described As...(Linear Prob. Model for Binary Outcome))",
           digits=2,
           no.space = TRUE,
           dep.var.labels = c("Violent", "Law-Abiding", "Lifethreatening"),
@@ -377,7 +402,7 @@ models2 = list(m_violent, m_lawabiding_protest, m_is_lifethreatening)
 
 stargazer(models2,
           header=FALSE,
-          title="Protest Described As (Weighted)",
+          title="Protest Described As...(Linear Prob. Model for Binary Outcome. Weighted)",
           digits=2,
           no.space = TRUE,
           dep.var.labels = c("Violent", "Law-Abiding", "Lifethreatening"),
