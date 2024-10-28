@@ -161,6 +161,8 @@ data <- long_data %>% select(c(support_arrests, support_arrests_num, support_pro
                  weight_manually_calculated, support_arrests_binary,
                  support_protesters_demands_binary, support_protesters_binary))
 
+# write_csv(long_data, "data/surveys/survey_sept_2024_with_weights_cleaned.csv")
+
 ```
 
 \newpage
