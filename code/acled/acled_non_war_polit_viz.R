@@ -77,7 +77,7 @@ event <- acled %>%
 # in front the Ukrainian consulate in central Saint Peterburg following a naval clash 
 # near Kerch the day before. Even though police was present during the event, no detentions were reported."
 
-##### share of non-war political protest after invasion
+##### share of non-war political protest after invasion ####
 
 filtered_data <- acled %>%
   filter(date >= '2022-02-24') %>% 
@@ -132,7 +132,7 @@ monthly_n_plot_type
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/share_political_non_war.png", plot = monthly_n_plot_type, width = 10, height = 6, dpi = 300)
 
 
-#### Share of war protest of all protest types
+#### Share of war protest of all protest types #### 
 
 monthly_share <- acled %>%
   filter(date >= '2022-02-24') %>%
@@ -195,8 +195,8 @@ monthly_share_plot_polit_violence <- ggplot(monthly_shares_violence, aes(x = mon
   geom_line() +  
   geom_point() +  
   scale_x_date(
-    date_breaks = "1 month",
-    labels = function(x) ifelse(month(x) == 1, format(x, "%Y-%b"), format(x, "%b")),
+    date_breaks = "1 year",
+    labels = function(x) format(x, "%Y"),  
     expand = c(0, 0)
   ) +
   scale_linetype_manual(values = c("political" = "solid", "Other" = "dashed"))+
@@ -213,6 +213,44 @@ monthly_share_plot_polit_violence <- ggplot(monthly_shares_violence, aes(x = mon
 
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/monthly_share_plot_polit_violence.png", plot = monthly_share_plot_polit_violence, width = 10, height = 6, dpi = 300)
 
+
+#### protests facing repression counts ####
+
+monthly_counts_violence_status <- acled_subset_for_plot %>%
+  filter(pro_gov != "Pro Government") %>%
+  group_by(month, political_bin, police_violence) %>%
+  summarise(event_count = n(), .groups = 'drop') %>%
+  mutate(police_violence = case_when(police_violence==1~"Faced Violence",
+                                     police_violence==0~"No Violence"),
+         police_violence = as.factor(police_violence),)  # Convert police_violence to factor
+
+# Plot monthly counts of protests, with facets for violence vs. non-violence and political vs. non-political
+monthly_count_plot <- ggplot(monthly_counts_violence_status, aes(x = month, y = event_count, color = police_violence)) +
+  geom_line() +  
+  geom_point() +  
+  scale_x_date(
+    date_breaks = "1 year",
+    labels = function(x) format(x, "%Y"),
+    expand = c(0, 0)
+  ) +
+  scale_color_manual(values = c("Faced Violence" = "red", "No Violence" = "blue")) +
+  labs(
+    title = "Monthly Counts of Political and Non-Political Protests Facing/Not Facing Police Violence",
+    x = "",
+    y = "Event Count",
+    linetype = "Protest Type",
+    color = "Police Violence"
+  ) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6.5)) +
+  facet_wrap(~ political_bin + police_violence, ncol = 2, scales = "free_y") +  # Facet by political_bin and police_violence
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = max(monthly_counts_violence_status$event_count) * 0.9, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = max(monthly_counts_violence_status$event_count) * 0.9, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
+
+monthly_count_plot
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/monthly_count_plot.png", plot = monthly_count_plot, width = 10, height = 6, dpi = 300)
 
 
 monthly_share_plot_violence_protests <- ggplot(monthly_shares_violence, aes(x = month)) +
