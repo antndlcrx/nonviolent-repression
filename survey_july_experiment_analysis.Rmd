@@ -1,0 +1,221 @@
+---
+title: "Survey July Analysis"
+author: "Maksim Zubok"
+date: "2024-11-03"
+output: pdf_document
+toc: True
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      results = 'asis')
+
+Sys.getlocale()
+# Set this to a locale that supports Cyrillic, for example, on Windows
+Sys.setlocale("LC_ALL", "Russian")
+
+##### Set Up #####
+pacman::p_load(tidyverse, readr, broom, 
+               lubridate, gt, gtsummary, survey, readxl,
+               gridExtra, knitr, haven, nnet, stargazer, kableExtra, gplots)
+```
+
+
+
+```{r transfrom data}
+survey_july <- read_csv("data/surveys/survey_july_with_weights.csv") %>% 
+  pivot_longer(
+    cols = contains("DV1"),  # Dynamically select columns containing "Group"
+    names_to = "fact_id",      # New column for the group names
+    values_to = "how_justified"  # New column for the values
+  ) %>%
+  filter(!is.na(how_justified)) %>% 
+  mutate(fact_id = sub(".*([A-Za-z])$", "\\1", fact_id),  # Extract group numbers,
+  not_repressive = case_when(
+      DV2 == "Совсем не репрессивными (10)" ~ 10,
+      DV2 == "9" ~ 9,
+      DV2 == "8" ~ 8,
+      DV2 == "7" ~ 7,
+      DV2 == "6" ~ 6,
+      DV2 == "5" ~ 5,
+      DV2 == "4" ~ 4,
+      DV2 == "3" ~ 3,
+      DV2 == "2" ~ 2,
+      DV2 == "Крайне репрессивными (1)" ~ 1,
+      DV2 == "Отказ от ответа" ~ NA_real_,
+      DV2 == "Затрудняюсь ответить" ~ NA_real_,
+      TRUE ~ NA_real_
+  ),
+  not_repressive_bin = case_when(
+      DV2 %in% c("Совсем не репрессивными (10)", "9", "8", "7", "6") ~ 1,
+      DV2 %in% c("5", "4", "3", "2", "Крайне репрессивными (1)", "Отказ от ответа", "Затрудняюсь ответить") ~ 0,
+      TRUE ~ NA_real_),
+  
+  how_justified_num = case_when(
+  how_justified == "Полностью оправданы (10)" ~ 10,
+  how_justified == "9" ~ 9,
+  how_justified == "8" ~ 8,
+  how_justified == "7" ~ 7,
+  how_justified == "6" ~ 6,
+  how_justified == "5" ~ 5,
+  how_justified == "4" ~ 4,
+  how_justified == "3" ~ 3,
+  how_justified == "2" ~ 2,
+  how_justified == "Совершенно не оправданы (1)" ~ 1,
+  how_justified == "Отказ от ответа" ~ NA_real_,
+  how_justified == "Затрудняюсь ответить" ~ NA_real_,
+  TRUE ~ NA_real_),
+  how_justified_bin = case_when(
+    how_justified %in% c("Полностью оправданы (10)", "9", "8", "7", "6") ~ 1,
+  how_justified %in% c("5", "4", "3", "2", "Совершенно не оправданы (1)", "Отказ от ответа", "Затрудняюсь ответить") ~ 0,
+  TRUE ~ NA_real_
+  ),
+  denied_twice = case_when(
+    fact_id %in% c("A", "B", "C", "D") ~ "once",
+    TRUE ~ "twice"
+  ), 
+  authority = case_when(
+    fact_id %in% c("A", "B", "E", "F") ~ "admin",
+    TRUE ~ "police"
+  ),
+  grievance = case_when(
+    fact_id %in% c("A", "C", "E", "H") ~ "historical",
+    TRUE ~ "corruption"
+  )
+  )
+```
+
+
+\newpage
+## Randomisation Check
+
+* Randomisation does not look perfect because there is a relationship between gender and one of the experimental factors (how many times was a protest authorisation denied).
+
+```{r randomisation test}
+test_rand_twice <- glm(factor(denied_twice) ~ age + gender  + university_education,
+                 family=binomial, data=survey_july)
+
+test_rand_authority <- glm(factor(authority) ~ age + gender + university_education,
+                 family=binomial, data=survey_july)
+
+test_rand_grievance <- glm(factor(grievance) ~ age + gender + university_education,
+                 family=binomial, data=survey_july)
+
+
+stargazer(test_rand_twice, test_rand_authority,
+          test_rand_grievance,
+          header=FALSE,
+          title="Randomisation Check",
+          digits=2)
+
+# summary(test_rand_type)
+```
+
+\newpage
+
+## Experiment Analysis
+
+* For the "how justified authorities' actions" variable, the values are 0 for "not justified at all" and 10 "very justified".
+
+* For the "how repressive" variable, the values are 0 for "very repressive" and 10 "not repressive at all".
+
+* Analysis below uses the binary coding of the said variables.
+
+```{r overall results}
+
+m_repr <- lm(not_repressive_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july)
+m_repr_w <- lm(not_repressive_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july, weights = weight_poststratify)
+m_just <- lm(how_justified_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july)
+m_just_w <- lm(how_justified_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july, weights = weight_poststratify)
+```
+
+```{r show overall reslts}
+models2 = list(m_repr, m_repr_w, m_just, m_just_w)
+
+stargazer(models2,
+          header=FALSE,
+          title="Linear Prob. Models for Main Outcomes (Models 2 and 4 are Weighted)",
+          digits=2,
+          no.space = TRUE,
+          dep.var.labels = c("How Repressive?", "How Justified?"),
+          covariate.labels = c("authority (police)", "grievance (historical)", "denied times (twice)")
+)
+```
+
+
+### Effect of Authority
+
+```{r plot means auth}
+
+par(mfrow = c(1, 2))
+
+# First plot
+plotmeans(formula = not_repressive_bin ~ authority,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Repressive are Authorities?",          
+          n.label = TRUE              
+)
+
+# Second plot
+plotmeans(formula = how_justified_bin ~ authority,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Justified are Authorities' Actions",          
+          n.label = TRUE              
+)
+
+
+```
+
+
+### Effect of Grievance
+
+```{r plot means grievance}
+
+par(mfrow = c(1, 2))
+
+plotmeans(formula = not_repressive_bin ~ grievance,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Repressive are Authorities?",          
+          n.label = TRUE              
+)
+
+plotmeans(formula = how_justified_bin ~ grievance,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Justified are Authorities' Actions",          
+          n.label = TRUE              
+)
+
+```
+
+
+### Effect of Times Denied
+
+```{r plot means times}
+
+par(mfrow = c(1, 2))
+
+plotmeans(formula = not_repressive_bin ~ denied_twice,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Repressive are Authorities?",          
+          n.label = TRUE              
+)
+
+plotmeans(formula = how_justified_bin ~ denied_twice,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Justified are Authorities' Actions",          
+          n.label = TRUE              
+)
+
+```
+
+
+
+
