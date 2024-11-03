@@ -193,7 +193,7 @@ monthly_shares_violence <- acled_subset_for_plot %>%
 
 monthly_share_plot_polit_violence <- ggplot(monthly_shares_violence, aes(x = month, y = share_violent, linetype = political_bin, group = political_bin)) +
   geom_line() +  
-  geom_point() +  
+  geom_point(size=0.5) +  
   scale_x_date(
     date_breaks = "1 year",
     labels = function(x) format(x, "%Y"),  
@@ -204,50 +204,85 @@ monthly_share_plot_polit_violence <- ggplot(monthly_shares_violence, aes(x = mon
        x = "",
        y = "Share of Protests",
        linetype = "Protest Type") + 
-  theme_minimal() +
+  theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6.5)) +
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "darkgrey") +
   annotate(geom = "text", x = as.Date("2022-02-24"), y = 60, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
-  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgrey") +
   annotate(geom = "text", x = as.Date("2022-09-21"), y = 60, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
 
+monthly_share_plot_polit_violence
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/monthly_share_plot_polit_violence.png", plot = monthly_share_plot_polit_violence, width = 10, height = 6, dpi = 300)
 
 
 #### protests facing repression counts ####
 
+# monthly_counts_violence_status <- acled_subset_for_plot %>%
+#   filter(pro_gov != "Pro Government") %>%
+#   group_by(month, political_bin, police_violence) %>%
+#   summarise(event_count = n(), .groups = 'drop') %>%
+#   mutate(police_violence = case_when(police_violence==1~"Faced Violence",
+#                                      police_violence==0~"No Violence"),
+#          police_violence = as.factor(police_violence),)  # Convert police_violence to factor
+# 
+# # Plot monthly counts of protests, with facets for violence vs. non-violence and political vs. non-political
+# monthly_count_plot <- ggplot(monthly_counts_violence_status, aes(x = month, y = event_count, color = police_violence)) +
+#   geom_line() +  
+#   geom_point(size=0.5) +  
+#   scale_x_date(
+#     date_breaks = "1 year",
+#     labels = function(x) format(x, "%Y"),
+#     expand = c(0, 0)
+#   ) +
+#   scale_color_manual(values = c("Faced Violence" = "red", "No Violence" = "blue")) +
+#   labs(
+#     title = "Monthly Counts of Political and Non-Political Protests Facing/Not Facing Police Violence",
+#     x = "",
+#     y = "Event Count",
+#     linetype = "Protest Type",
+#     color = "Police Violence"
+#   ) + 
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6.5)) +
+#   facet_wrap(~ political_bin + police_violence, ncol = 2, scales = "free_y") +  # Facet by political_bin and police_violence
+#   geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
+#   annotate(geom = "text", x = as.Date("2022-02-24"), y = max(monthly_counts_violence_status$event_count) * 0.5, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
+#   geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
+#   annotate(geom = "text", x = as.Date("2022-09-21"), y = max(monthly_counts_violence_status$event_count) * 0.5, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
+
 monthly_counts_violence_status <- acled_subset_for_plot %>%
   filter(pro_gov != "Pro Government") %>%
-  group_by(month, political_bin, police_violence) %>%
+  group_by(month, police_violence) %>%
   summarise(event_count = n(), .groups = 'drop') %>%
   mutate(police_violence = case_when(police_violence==1~"Faced Violence",
                                      police_violence==0~"No Violence"),
          police_violence = as.factor(police_violence),)  # Convert police_violence to factor
 
 # Plot monthly counts of protests, with facets for violence vs. non-violence and political vs. non-political
-monthly_count_plot <- ggplot(monthly_counts_violence_status, aes(x = month, y = event_count, color = police_violence)) +
+monthly_count_plot <- ggplot(monthly_counts_violence_status, aes(x = month, y = event_count, linetype = police_violence)) +
   geom_line() +  
-  geom_point() +  
+  geom_point(size=0.15) +  
   scale_x_date(
     date_breaks = "1 year",
     labels = function(x) format(x, "%Y"),
     expand = c(0, 0)
   ) +
-  scale_color_manual(values = c("Faced Violence" = "red", "No Violence" = "blue")) +
+  scale_linetype_manual(values = c("Faced Violence" = "solid", "No Violence" = "dashed")) +
   labs(
-    title = "Monthly Counts of Political and Non-Political Protests Facing/Not Facing Police Violence",
+    title = "",
     x = "",
-    y = "Event Count",
-    linetype = "Protest Type",
-    color = "Police Violence"
+    y = "",
+    linetype = "",
+    color = ""
   ) + 
-  theme_minimal() +
+  theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6.5)) +
-  facet_wrap(~ political_bin + police_violence, ncol = 2, scales = "free_y") +  # Facet by political_bin and police_violence
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "black") +
-  annotate(geom = "text", x = as.Date("2022-02-24"), y = max(monthly_counts_violence_status$event_count) * 0.9, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
-  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "black") +
-  annotate(geom = "text", x = as.Date("2022-09-21"), y = max(monthly_counts_violence_status$event_count) * 0.9, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
+  #facet_wrap(~ political_bin + police_violence, ncol = 2, scales = "free_y") +  # Facet by political_bin and police_violence
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "darkgrey") +
+  annotate(geom = "text", x = as.Date("2022-02-24"), y = max(monthly_counts_violence_status$event_count) * 0.65, label = "Invasion", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgrey") +
+  annotate(geom = "text", x = as.Date("2022-09-21"), y = max(monthly_counts_violence_status$event_count) * 0.65, label = "Mobilisation", vjust = -0.5, hjust = 0.5, color = "black", angle = 90, size = 3)
+
 
 monthly_count_plot
 ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/monthly_count_plot.png", plot = monthly_count_plot, width = 10, height = 6, dpi = 300)
