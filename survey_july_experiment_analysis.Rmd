@@ -33,24 +33,24 @@ survey_july <- read_csv("data/surveys/survey_july_with_weights.csv") %>%
   ) %>%
   filter(!is.na(how_justified)) %>% 
   mutate(fact_id = sub(".*([A-Za-z])$", "\\1", fact_id),  # Extract group numbers,
-  not_repressive = case_when(
-      DV2 == "Совсем не репрессивными (10)" ~ 10,
-      DV2 == "9" ~ 9,
-      DV2 == "8" ~ 8,
-      DV2 == "7" ~ 7,
-      DV2 == "6" ~ 6,
-      DV2 == "5" ~ 5,
-      DV2 == "4" ~ 4,
-      DV2 == "3" ~ 3,
-      DV2 == "2" ~ 2,
-      DV2 == "Крайне репрессивными (1)" ~ 1,
-      DV2 == "Отказ от ответа" ~ NA_real_,
-      DV2 == "Затрудняюсь ответить" ~ NA_real_,
+  not_repressive_num = case_when(
+      DV2 == "Совсем не репрессивными (10)" ~ 1,
+      DV2 == "9" ~ 2,
+      DV2 == "8" ~ 3,
+      DV2 == "7" ~ 4,
+      DV2 == "6" ~ 5,
+      DV2 == "5" ~ 6,
+      DV2 == "4" ~ 7,
+      DV2 == "3" ~ 8,
+      DV2 == "2" ~ 9,
+      DV2 == "Крайне репрессивными (1)" ~ 10,
+      DV2 == "Отказ от ответа" ~ 5,
+      DV2 == "Затрудняюсь ответить" ~ 5,
       TRUE ~ NA_real_
   ),
   not_repressive_bin = case_when(
-      DV2 %in% c("Совсем не репрессивными (10)", "9", "8", "7", "6") ~ 1,
-      DV2 %in% c("5", "4", "3", "2", "Крайне репрессивными (1)", "Отказ от ответа", "Затрудняюсь ответить") ~ 0,
+      DV2 %in% c("Совсем не репрессивными (10)", "9", "8", "7", "6", "Отказ от ответа", "Затрудняюсь ответить") ~ 0,
+      DV2 %in% c("Крайне репрессивными (1)","5", "4", "3", "2") ~ 1,
       TRUE ~ NA_real_),
   
   how_justified_num = case_when(
@@ -64,8 +64,8 @@ survey_july <- read_csv("data/surveys/survey_july_with_weights.csv") %>%
   how_justified == "3" ~ 3,
   how_justified == "2" ~ 2,
   how_justified == "Совершенно не оправданы (1)" ~ 1,
-  how_justified == "Отказ от ответа" ~ NA_real_,
-  how_justified == "Затрудняюсь ответить" ~ NA_real_,
+  how_justified == "Отказ от ответа" ~ 5,
+  how_justified == "Затрудняюсь ответить" ~ 5,
   TRUE ~ NA_real_),
   how_justified_bin = case_when(
     how_justified %in% c("Полностью оправданы (10)", "9", "8", "7", "6") ~ 1,
@@ -115,20 +115,26 @@ stargazer(test_rand_twice, test_rand_authority,
 
 \newpage
 
-## Experiment Analysis
+## Experiment Analysis (Binary)
 
-* For the "how justified authorities' actions" variable, the values are 0 for "not justified at all" and 10 "very justified".
+* For the "how justified authorities' actions" variable, the values are 1 for "not justified at all" and 10 "very justified".
 
-* For the "how repressive" variable, the values are 0 for "very repressive" and 10 "not repressive at all".
+* Initially, the "how repressive" variable, the values are 1 for "very repressive" and 10 "not repressive at all". The present analysis relies on a reverse coding of the variable where "1" is not repressive at all and "10" is most repressive.
 
 * Analysis below uses the binary coding of the said variables.
 
+* "Do not know" and "refuse to answer" are coded into the "not repressive" and "not justified" category of the resulting binary variable. 
+
+* There are 360 "Do not know" and "refuse to answer" in the "how justified" outcome. 
+
+* There are 418 "Do not know" and "refuse to answer" in the "how repressive" outcome. 
+
 ```{r overall results}
 
-m_repr <- lm(not_repressive_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july)
-m_repr_w <- lm(not_repressive_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july, weights = weight_poststratify)
-m_just <- lm(how_justified_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july)
-m_just_w <- lm(how_justified_bin ~ factor(authority)+factor(grievance) + factor(denied_twice), data = survey_july, weights = weight_poststratify)
+m_repr <- lm(not_repressive_bin ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july)
+m_repr_w <- lm(not_repressive_bin ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july, weights = weight_poststratify)
+m_just <- lm(how_justified_bin ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july)
+m_just_w <- lm(how_justified_bin ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july, weights = weight_poststratify)
 ```
 
 ```{r show overall reslts}
@@ -140,11 +146,11 @@ stargazer(models2,
           digits=2,
           no.space = TRUE,
           dep.var.labels = c("How Repressive?", "How Justified?"),
-          covariate.labels = c("authority (police)", "grievance (historical)", "denied times (twice)")
+          covariate.labels = c("authority (police)", "grievance (historical)", "denied times (twice)", "Gender (Woman)", "Age", "University Education")
 )
 ```
 
-
+\newpage
 ### Effect of Authority
 
 ```{r plot means auth}
@@ -167,11 +173,16 @@ plotmeans(formula = how_justified_bin ~ authority,
           n.label = TRUE              
 )
 
-
+# mt <- lm(not_repressive_bin ~ authority, survey_july)
+# mt <- lm(how_justified_bin ~ authority, survey_july)
+# 
+# summary(mt)
 ```
 
-
+\newpage
 ### Effect of Grievance
+
+* Effect of Grievance type is not significant at 0.05 level for "how repressive" but is significant for "how justified". 
 
 ```{r plot means grievance}
 
@@ -191,10 +202,17 @@ plotmeans(formula = how_justified_bin ~ grievance,
           n.label = TRUE              
 )
 
+# mt <- lm(not_repressive_bin ~ grievance, survey_july)
+# mt <- lm(how_justified_bin ~ grievance, survey_july)
+# 
+# summary(mt)
+
 ```
 
-
+\newpage
 ### Effect of Times Denied
+
+* The effect of "how many times denied" is not significant for both outcomes.
 
 ```{r plot means times}
 
@@ -214,8 +232,138 @@ plotmeans(formula = how_justified_bin ~ denied_twice,
           n.label = TRUE              
 )
 
+# 
+# mt <- lm(not_repressive_bin ~ denied_twice, survey_july)
+# mt <- lm(how_justified_bin ~ denied_twice, survey_july)
+# 
+# summary(mt)
 ```
 
+\newpage
+## Experiment Analysis Continous 
+
+* This analysis relies on the continuous version of the outcome variables.
+
+* "I do not know" and "refuse to answer" are coded as "5" landing in the middle of the outcome variable distribution. 
+
+* There are 360 "Do not know" and "refuse to answer" in the "how justified" outcome. 
+
+* There are 418 "Do not know" and "refuse to answer" in the "how repressive" outcome. 
+
+```{r overall results n}
+
+m_reprn <- lm(not_repressive_num ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july)
+m_repr_wn <- lm(not_repressive_num ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july, weights = weight_poststratify)
+m_justn <- lm(how_justified_num ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july)
+m_just_wn <- lm(how_justified_num ~ factor(authority)+factor(grievance) + factor(denied_twice) + gender + age + university_education, data = survey_july, weights = weight_poststratify)
+```
+
+```{r show overall reslts n}
+models3 = list(m_reprn, m_repr_wn, m_justn, m_just_wn)
+
+stargazer(models3,
+          header=FALSE,
+          title="Linear Models for Main Outcomes (Models 2 and 4 are Weighted)",
+          digits=2,
+          no.space = TRUE,
+          dep.var.labels = c("How Repressive?", "How Justified?"),
+          covariate.labels = c("authority (police)", "grievance (historical)", "denied times (twice)", "Gender (Woman)", "Age", "University Education")
+)
+```
+
+\newpage
+
+### Effect of Authority
+
+* Both outcomes significant
+
+```{r plot means auth n}
+
+par(mfrow = c(1, 2))
+
+# First plot
+plotmeans(formula = not_repressive_num ~ authority,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Repressive are Authorities?",          
+          n.label = TRUE              
+)
+
+# Second plot
+plotmeans(formula = how_justified_num ~ authority,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Justified are Authorities' Actions",          
+          n.label = TRUE              
+)
+
+# mt <- lm(not_repressive_num ~ authority, survey_july)
+# mt <- lm(how_justified_num ~ authority, survey_july)
+# 
+# summary(mt)
+```
+\newpage
+
+### Effect of Grievance
+
+* Effect of Grievance type is significant for both outcomes.
+
+```{r plot means grievance n}
+
+par(mfrow = c(1, 2))
+
+plotmeans(formula = not_repressive_num ~ grievance,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Repressive are Authorities?",          
+          n.label = TRUE              
+)
+
+plotmeans(formula = how_justified_num ~ grievance,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Justified are Authorities' Actions",          
+          n.label = TRUE              
+)
+
+# mt <- lm(not_repressive_num ~ grievance, survey_july)
+# mt <- lm(how_justified_num ~ grievance, survey_july)
+# 
+# summary(mt)
+
+```
+\newpage
+
+### Effect of Times Denied
+
+* The effect of "how many times denied" is significant for "how justified" but not for "how repressive".
+
+```{r plot means times n}
+
+par(mfrow = c(1, 2))
+
+plotmeans(formula = not_repressive_num ~ denied_twice,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Repressive are Authorities?",          
+          n.label = TRUE              
+)
+
+plotmeans(formula = how_justified_num ~ denied_twice,  
+          data = survey_july,           
+          xlab = "",  
+          ylab = "How Justified are Authorities' Actions",          
+          n.label = TRUE              
+)
 
 
+# mt <- lm(not_repressive_num ~ denied_twice, survey_july)
+# mt <- lm(how_justified_num ~ denied_twice, survey_july)
+# 
+# summary(mt)
+```
+
+```{r}
+# write_csv(survey_july, "data/surveys/survey_july_2024_coded_exper_with_weights.csv")
+```
 

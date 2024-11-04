@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.10.9)  3 NOV 2024 18:35
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.10.9)  4 NOV 2024 13:55
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -450,6 +450,9 @@ File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
 
 LaTeX Warning: Label `' multiply defined.
 
+
+LaTeX Warning: Label `' multiply defined.
+
 )
 \openout1 = `survey_july_experiment_analysis.aux'.
 
@@ -563,32 +566,58 @@ File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 
 [2{c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}{c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}]
-<survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf, id=34, 469.755pt x 325.215pt>
-File: survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf Graphic file (type pdf)
-<use survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf>
-Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf  used on input line 187.
-(pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-
 
 [3{c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}]
-<survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf, id=41, 469.755pt x 325.215pt>
-File: survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf Graphic file (type pdf)
-<use survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf>
-Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf  used on input line 191.
+<survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf, id=48, 469.755pt x 325.215pt>
+File: survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf Graphic file (type pdf)
+<use survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf>
+Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf  used on input line 208.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 
 
 [4 <./survey_july_experiment_analysis_files/figure-latex/plot means auth-1.pdf>]
-<survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf, id=52, 469.755pt x 325.215pt>
-File: survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf Graphic file (type pdf)
-<use survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf>
-Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf  used on input line 195.
+<survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf, id=59, 469.755pt x 325.215pt>
+File: survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf Graphic file (type pdf)
+<use survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf>
+Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf  used on input line 221.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 
 
 [5 <./survey_july_experiment_analysis_files/figure-latex/plot means grievance-1.pdf>]
+<survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf, id=69, 469.755pt x 325.215pt>
+File: survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf Graphic file (type pdf)
+<use survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf>
+Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf  used on input line 234.
+(pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 
-[6 <./survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf>] (./survey_july_experiment_analysis.aux)
+
+[6 <./survey_july_experiment_analysis_files/figure-latex/plot means times-1.pdf>]
+
+[7]
+<survey_july_experiment_analysis_files/figure-latex/plot means auth n-1.pdf, id=85, 469.755pt x 325.215pt>
+File: survey_july_experiment_analysis_files/figure-latex/plot means auth n-1.pdf Graphic file (type pdf)
+<use survey_july_experiment_analysis_files/figure-latex/plot means auth n-1.pdf>
+Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means auth n-1.pdf  used on input line 303.
+(pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
+
+
+[8 <./survey_july_experiment_analysis_files/figure-latex/plot means auth n-1.pdf>]
+<survey_july_experiment_analysis_files/figure-latex/plot means grievance n-1.pdf, id=95, 469.755pt x 325.215pt>
+File: survey_july_experiment_analysis_files/figure-latex/plot means grievance n-1.pdf Graphic file (type pdf)
+<use survey_july_experiment_analysis_files/figure-latex/plot means grievance n-1.pdf>
+Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means grievance n-1.pdf  used on input line 314.
+(pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
+
+
+[9 <./survey_july_experiment_analysis_files/figure-latex/plot means grievance n-1.pdf>]
+<survey_july_experiment_analysis_files/figure-latex/plot means times n-1.pdf, id=105, 469.755pt x 325.215pt>
+File: survey_july_experiment_analysis_files/figure-latex/plot means times n-1.pdf Graphic file (type pdf)
+<use survey_july_experiment_analysis_files/figure-latex/plot means times n-1.pdf>
+Package pdftex.def Info: survey_july_experiment_analysis_files/figure-latex/plot means times n-1.pdf  used on input line 326.
+(pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
+
+
+[10 <./survey_july_experiment_analysis_files/figure-latex/plot means times n-1.pdf>] (./survey_july_experiment_analysis.aux)
  ***********
 LaTeX2e <2024-06-01> patch level 2
 L3 programming layer <2024-09-10>
@@ -598,18 +627,18 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 12813 strings out of 475539
- 201635 string characters out of 5775896
- 602583 words of memory out of 5000000
- 35206 multiletter control sequences out of 15000+600000
+ 12851 strings out of 475539
+ 203650 string characters out of 5775896
+ 607771 words of memory out of 5000000
+ 35235 multiletter control sequences out of 15000+600000
  608851 words of font info for 78 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 89i,11n,93p,385b,440s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,11n,93p,451b,440s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr7.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb><c:/Users/murrn/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy7.pfb>
-Output written on survey_july_experiment_analysis.pdf (6 pages, 194338 bytes).
+Output written on survey_july_experiment_analysis.pdf (10 pages, 212478 bytes).
 PDF statistics:
- 142 PDF objects out of 1000 (max. 8388607)
- 105 compressed objects within 2 object streams
- 15 named destinations out of 1000 (max. 500000)
- 56 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 200 PDF objects out of 1000 (max. 8388607)
+ 153 compressed objects within 2 object streams
+ 24 named destinations out of 1000 (max. 500000)
+ 103 words of extra memory for PDF output out of 10000 (max. 10000000)
 
