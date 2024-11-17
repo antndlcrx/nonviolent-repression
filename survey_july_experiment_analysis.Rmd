@@ -19,7 +19,8 @@ Sys.setlocale("LC_ALL", "Russian")
 ##### Set Up #####
 pacman::p_load(tidyverse, readr, broom, 
                lubridate, gt, gtsummary, survey, readxl,
-               gridExtra, knitr, haven, nnet, stargazer, kableExtra, gplots)
+               gridExtra, knitr, haven, nnet, stargazer, kableExtra, gplots,
+               mice, xtable)
 ```
 
 
@@ -365,5 +366,149 @@ plotmeans(formula = how_justified_num ~ denied_twice,
 
 ```{r}
 # write_csv(survey_july, "data/surveys/survey_july_2024_coded_exper_with_weights.csv")
+```
+
+
+## Multiple Imputation
+
+* We impute missing values via multiple imputation, with the `mice` package. We use default parameter specification for imputation: `five datasets` and `10 iterations`. We work with the binary version of the variables, where all "refuse" and "do not know" replies are taken as `NA` and are imputed. 
+
+* Imputation results align with the no imputation results
+
+```{r}
+survey_july <- read_csv("data/surveys/survey_july_with_weights.csv") %>% 
+  pivot_longer(
+    cols = contains("DV1"),  # Dynamically select columns containing "Group"
+    names_to = "fact_id",      # New column for the group names
+    values_to = "how_justified"  # New column for the values
+  ) %>%
+  filter(!is.na(how_justified)) %>% 
+  mutate(fact_id = sub(".*([A-Za-z])$", "\\1", fact_id),  # Extract group numbers,
+  not_repressive_num = case_when(
+      DV2 == "Совсем не репрессивными (10)" ~ 1,
+      DV2 == "9" ~ 2,
+      DV2 == "8" ~ 3,
+      DV2 == "7" ~ 4,
+      DV2 == "6" ~ 5,
+      DV2 == "5" ~ 6,
+      DV2 == "4" ~ 7,
+      DV2 == "3" ~ 8,
+      DV2 == "2" ~ 9,
+      DV2 == "Крайне репрессивными (1)" ~ 10,
+      # DV2 == "Отказ от ответа" ~ 5,
+      # DV2 == "Затрудняюсь ответить" ~ 5,
+      TRUE ~ NA_real_
+  ),
+  not_repressive_bin = case_when(
+      DV2 %in% c("Совсем не репрессивными (10)", "9", "8", "7", "6") ~ 0,
+      DV2 %in% c("Крайне репрессивными (1)","5", "4", "3", "2") ~ 1,
+      TRUE ~ NA_real_),
+  
+  how_justified_num = case_when(
+  how_justified == "Полностью оправданы (10)" ~ 10,
+  how_justified == "9" ~ 9,
+  how_justified == "8" ~ 8,
+  how_justified == "7" ~ 7,
+  how_justified == "6" ~ 6,
+  how_justified == "5" ~ 5,
+  how_justified == "4" ~ 4,
+  how_justified == "3" ~ 3,
+  how_justified == "2" ~ 2,
+  how_justified == "Совершенно не оправданы (1)" ~ 1,
+  # how_justified == "Отказ от ответа" ~ 5,
+  # how_justified == "Затрудняюсь ответить" ~ 5,
+  TRUE ~ NA_real_),
+  how_justified_bin = case_when(
+    how_justified %in% c("Полностью оправданы (10)", "9", "8", "7", "6") ~ 1,
+  how_justified %in% c("5", "4", "3", "2", "Совершенно не оправданы (1)") ~ 0,
+  TRUE ~ NA_real_
+  ),
+  denied_twice = case_when(
+    fact_id %in% c("A", "B", "C", "D") ~ "once",
+    TRUE ~ "twice"
+  ), 
+  authority = case_when(
+    fact_id %in% c("A", "B", "E", "F") ~ "admin",
+    TRUE ~ "police"
+  ),
+  grievance = case_when(
+    fact_id %in% c("A", "C", "E", "H") ~ "historical",
+    TRUE ~ "corruption"
+  )
+  ) %>% 
+  select(age, gender, university_education, not_repressive_bin, how_justified_bin,
+         denied_twice, authority, grievance, weight_poststratify)
+
+```
+
+```{r}
+
+imputed_data <- mice(survey_july, m=5, maxit=10, method = "logreg", printFlag = FALSE)
+
+# Define the dependent variables and their respective formulas
+pooled_models <- list(
+  "Not Repressive (Unweighted)" = with(
+    imputed_data,
+    lm(not_repressive_bin ~ factor(authority) + factor(grievance) + 
+         factor(denied_twice) + gender + age + university_education)
+  ),
+  "Not Repressive (Weighted)" = with(
+    imputed_data,
+    lm(not_repressive_bin ~ factor(authority) + factor(grievance) + 
+         factor(denied_twice) + gender + age + university_education, weights = weight_poststratify)
+  ),
+  "How Justified (Unweighted)" = with(
+    imputed_data,
+    lm(how_justified_bin ~ factor(authority) + factor(grievance) + 
+         factor(denied_twice) + gender + age + university_education)
+  ),
+  "How Justified (Weighted)" = with(
+    imputed_data,
+    lm(how_justified_bin ~ factor(authority) + factor(grievance) + 
+         factor(denied_twice) + gender + age + university_education, weights = weight_poststratify)
+  )
+)
+
+# Pool results and format the output
+results_table <- purrr::imap_dfr(pooled_models, ~ {
+  summary_data <- summary(pool(.x))
+  tibble(
+    Term = summary_data$term,
+    Model = .y,
+    Estimate = round(summary_data$estimate, 2),
+    SE = round(summary_data$std.error, 2),
+    t.value = round(summary_data$statistic, 2)
+  ) %>%
+    mutate(Result = paste0(Estimate, " [", SE, "; ", t.value, "]"))
+}) %>%
+  select(Term, Model, Result) %>%
+  pivot_wider(names_from = Model, values_from = Result) %>%
+  filter(Term != "(Intercept)") %>% # Exclude the intercept
+  mutate(
+    Term = case_when(
+      Term == "factor(authority)1" ~ "Authority (Yes)",
+      Term == "factor(grievance)1" ~ "Grievance (Yes)",
+      Term == "factor(denied_twice)1" ~ "Denied Twice (Yes)",
+      Term == "genderWoman" ~ "Gender (Woman)",
+      Term == "university_educationBA+" ~ "University Education (BA+)",
+      TRUE ~ Term
+    )
+  )
+
+# Create the xtable with the formatted results
+xtable_table <- xtable(results_table, align = c("l", "l", "c", "c", "c", "c"))
+
+# Define the note to add below the table
+note <- "Note: Estimates are pooled from multiple imputed datasets and displayed as Estimate [SE; t-value]."
+
+# Add the note below the table using `add.to.row`
+add_to_row <- list(pos = list(nrow(results_table)), command = paste0("\\hline\n\\multicolumn{5}{l}{", note, "} \\\\\n"))
+
+
+# Print the table with xtable
+print.xtable(xtable_table,
+             include.rownames = FALSE,
+             comment = FALSE,
+      add.to.row = add_to_row)
 ```
 
