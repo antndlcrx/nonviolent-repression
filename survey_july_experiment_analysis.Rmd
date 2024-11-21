@@ -368,7 +368,8 @@ plotmeans(formula = how_justified_num ~ denied_twice,
 # write_csv(survey_july, "data/surveys/survey_july_2024_coded_exper_with_weights.csv")
 ```
 
-
+\newpage
+\landscape
 ## Multiple Imputation
 
 * We impute missing values via multiple imputation, with the `mice` package. We use default parameter specification for imputation: `five datasets` and `10 iterations`. We work with the binary version of the variables, where all "refuse" and "do not know" replies are taken as `NA` and are imputed. 

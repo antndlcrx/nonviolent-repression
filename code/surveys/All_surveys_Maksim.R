@@ -8,6 +8,7 @@ library(reshape2)
 library(labelled)
 library(readxl)
 library(tidyr)
+library(tidyverse)
 
 #library(writexl)
 
@@ -32,10 +33,24 @@ Qaug <- read.csv(file.path(DATA_PATH, "survey_with_weights.csv"))
 Qfeb <- read.csv(file.path(DATA_PATH, "feb_clean.csv"))
 Qapr <- read.csv(file.path(DATA_PATH, "post_election.csv"))
 QJuly <- read_excel(file.path(DATA_PATH, "july_2024.xlsx"))
+Q_sept <- survey_sept <- read_csv("data/surveys/survey_sept_2024_with_weights.csv",
+                                  locale = locale(encoding = "UTF-8"))
 
 QJuly <- QJuly[-1, ]
 # Convert all columns to their appropriate data types if needed after removing first row
 QJuly <- QJuly %>% mutate(across(everything(), type.convert, as.is = TRUE))
+
+
+Q_sept <- Q_sept %>% 
+  rename(putin_support = Q12, law_obedience = Q13, unauth_protest_partic = Q16_2,
+         approved_protest_partic = Q16_1) %>% 
+  mutate(survey_time = "September 2024",
+         law_obedience = case_when(
+           law_obedience == "В некоторых случаях следовать голосу своей совести, даже если это ведет к нарушению закона" ~ "sometimes_violate",
+           law_obedience == "Подчиняться закону во всех случаях, без исключений" ~ "always_abide",
+           TRUE ~ law_obedience  
+         )
+         )
 
 #### 1.3. Selecting variables ####
 Ljul_selected <- Ljuly %>%
@@ -647,7 +662,8 @@ Qfeb_selected$unauth_protest_partic[Qfeb_selected$unauth_protest_partic == 5] <-
 
 ## standardise putins support var type
 library(purrr)
-datasets <- list(Ljul_selected, Lsep_selected, Qaug_selected, Qfeb_selected, Qapr_selected, QJuly_selected, res_selected)
+datasets <- list(Ljul_selected, Lsep_selected, Qaug_selected, Qfeb_selected,
+                 Qapr_selected, QJuly_selected, res_selected, Q_sept)
 datasets <- map(datasets, ~ .x %>%
                   mutate(
                     putin_support = as.character(putin_support),
@@ -675,9 +691,12 @@ Qfeb_selected <- datasets[[4]]
 Qapr_selected <- datasets[[5]]
 QJuly_selected <- datasets[[6]]
 res_selected <- datasets[[7]]
+Q_sept_selected <- datasets[[8]]
+
 
 # law obedience
 data_law_obedience <- bind_rows(
+  Q_sept_selected,
   Qaug_selected %>% select(survey_time, putin_support, law_obedience),
   Qfeb_selected %>% select(survey_time, putin_support, law_obedience),
   Qapr_selected %>% select(survey_time, putin_support, law_obedience),
@@ -696,8 +715,12 @@ data_law_obedience <- bind_rows(
       putin_support == "Не одобряю  " ~ "disapprove",
       T ~ NA
     ),
+    law_obedience = case_when(law_obedience=="Затрудняюсь ответить"~"no_answer",
+                              law_obedience=="Отказ от ответа" ~ "no_answer",
+                              TRUE~law_obedience),
     survey_time = factor(survey_time, levels = c("July 2020", "September 2020", "December 2021",
-                                                 "August 2023", "February 2024", "April 2024", "July 2024"))
+                                                 "August 2023", "February 2024", "April 2024", "July 2024",
+                                                 "September 2024"))
   ) 
 
 report_shares = data_law_obedience %>%
@@ -759,6 +782,7 @@ ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/share_always
 # Unauthr Protest
 
 data_approv_protest <- bind_rows(
+  Q_sept,
   Ljul_selected %>% select(survey_time, putin_support, unauth_protest_partic),
   Lsep_selected %>% select(survey_time, putin_support, unauth_protest_partic),
   Qaug_selected %>% select(survey_time, putin_support, unauth_protest_partic),
@@ -782,7 +806,8 @@ data_approv_protest <- bind_rows(
       putin_support == "Не одобряю  " ~ "disapprove",
       T ~ NA
     ),
-    survey_time = factor(survey_time, levels = c("July 2020", "September 2020", "August 2023", "February 2024"))
+    survey_time = factor(survey_time, levels = c("July 2020", "September 2020", "August 2023", "February 2024",
+                                                 "September 2024"))
   ) 
 
 unique(data_approv_protest$unauth_protest_approve)
