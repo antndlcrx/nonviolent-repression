@@ -29,11 +29,11 @@ Ljuly <- read_stata(file.path(DATA_PATH, "omnibus-2019-july.dta"))
 Lsep <- read_stata(file.path(DATA_PATH, "sep_combined_final2.dta"), encoding = "utf8")
 Lsep_exp <- read_sav(file.path(DATA_PATH, "20cur09 Эксперимент.sav"))
 res <- read_stata(file.path(DATA_PATH, "all_waves_and_samples_merged.dta"))
-Qaug <- read.csv(file.path(DATA_PATH, "survey_with_weights.csv"))
-Qfeb <- read.csv(file.path(DATA_PATH, "feb_clean.csv"))
+Qaug <- read.csv(file.path(DATA_PATH, "survey_with_weights.csv")) # no freedoms q
+Qfeb <- read.csv(file.path(DATA_PATH, "feb_clean.csv"))  # no freedoms q
 Qapr <- read.csv(file.path(DATA_PATH, "post_election.csv"))
 QJuly <- read_excel(file.path(DATA_PATH, "july_2024.xlsx"))
-Q_sept <- survey_sept <- read_csv("data/surveys/survey_sept_2024_with_weights.csv",
+Q_sept <- survey_sept <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/surveys/survey_sept_2024_with_weights.csv",
                                   locale = locale(encoding = "UTF-8"))
 
 QJuly <- QJuly[-1, ]
@@ -49,7 +49,25 @@ Q_sept <- Q_sept %>%
            law_obedience == "В некоторых случаях следовать голосу своей совести, даже если это ведет к нарушению закона" ~ "sometimes_violate",
            law_obedience == "Подчиняться закону во всех случаях, без исключений" ~ "always_abide",
            TRUE ~ law_obedience  
-         )
+         ),
+         get_elected = case_when(Q17_1 == "Полностью соблюдаются" ~ "fully guaranteed",
+                                 Q17_1 == "Скорее соблюдаются" ~ "partially guaranteed",
+                                 Q17_1 == "Скорее не соблюдаются" ~ "partially violated",
+                                 Q17_1 == "Полностью не соблюдаются" ~ "fully violated",
+                                 Q17_1 == "Затрудняюсь ответить" ~ NA_character_,
+                                 Q17_1 == "Отказ от ответа" ~ NA_character_),
+         free_assembly = case_when(Q17_2 == "Полностью соблюдаются" ~ "fully guaranteed",
+                                   Q17_2 == "Скорее соблюдаются" ~ "partially guaranteed",
+                                   Q17_2 == "Скорее не соблюдаются" ~ "partially violated",
+                                   Q17_2 == "Полностью не соблюдаются" ~ "fully violated",
+                                   Q17_2 == "Затрудняюсь ответить" ~ NA_character_,
+                                   Q17_2 == "Отказ от ответа" ~ NA_character_),
+         free_speech = case_when(Q17_3 == "Полностью соблюдаются" ~ "fully guaranteed",
+                                 Q17_3 == "Скорее соблюдаются" ~ "partially guaranteed",
+                                 Q17_3 == "Скорее не соблюдаются" ~ "partially violated",
+                                 Q17_3 == "Полностью не соблюдаются" ~ "fully violated",
+                                 Q17_3 == "Затрудняюсь ответить" ~ NA_character_,
+                                 Q17_3 == "Отказ от ответа" ~ NA_character_)
          )
 
 #### 1.3. Selecting variables ####
@@ -88,9 +106,10 @@ unique(Lsep_selected$law_obedience_organisers_participants
 # ЧТО УЧАСТНИКИ И ОРГАНИЗАТОРЫ ЛЮБЫХ МИТИНГОВ ДОЛЖНЫ ПОДЧИНЯТЬСЯ ЗАКОНУ ВО ВСЕХ СЛУЧАЯХ, 
 # ДАЖЕ ЕСЛИ ОНИ НЕ СОГЛАСНЫ С РЕШЕНИЕМ ОРГАНОВ ВЛАСТИ?
 
-
+# RES HAS ONE MORE CATEGORY (NEUTRAL) IN Qs ON POLITICAL FREEDOMS
 res_selected <- res %>%
-  select(age_round1, gender_round1, educ_round1, q39, qO1, q80_1, q80_2, q80_3, q81_1, q81_2, q81_3, qG5, qD6) %>%
+  select(age_round1, gender_round1, educ_round1, q39, qO1, q80_1, q80_2, q80_3,
+         q81_1, q81_2, q81_3, qG5, qD6, qG12A, qG12B, qG12C) %>%
   rename(age = age_round1, gender = gender_round1, educaction = educ_round1, vote_next = q39, law_obedience = qO1,
          protest_permition = q80_1, arrest_participants = q80_2,
          arrest_organizers = q80_3, limit_websites = q81_1, surveilance = q81_2, foreign_agent = q81_3,
@@ -101,7 +120,29 @@ res_selected <- res %>%
     law_obedience == "1" ~ "always_abide",
     law_obedience %in% c("98", "99") ~ "no_answer",
     TRUE ~ law_obedience
-  ))
+  ),
+  get_elected = case_when(qG12A == 1 ~ "fully guaranteed",
+                          qG12A == 2 ~ "partially guaranteed",
+                          qG12A == 3 ~ "neutral",
+                          qG12A == 4 ~ "partially violated",
+                          qG12A == 5 ~ "fully violated",
+                          qG12A == 98 ~ NA_character_,
+                          qG12A == 99 ~ NA_character_),
+  free_assembly = case_when(qG12B == 1 ~ "fully guaranteed",
+                            qG12B == 2 ~ "partially guaranteed",
+                            qG12B == 3 ~ "neutral",
+                            qG12B == 4 ~ "partially violated",
+                          qG12B == 5 ~ "fully violated",
+                            qG12B == 98 ~ NA_character_,
+                            qG12B == 99 ~ NA_character_),
+  free_speech = case_when(qG12C == 1 ~ "fully guaranteed",
+                          qG12C == 2 ~ "partially guaranteed",
+                          qG12C == 3 ~ "neutral",
+                          qG12C == 4 ~ "partially violated",
+                          qG12C == 5 ~ "fully violated",
+                          qG12C == 98 ~ NA_character_,
+                          qG12C == 99 ~ NA_character_)
+  )
 
 res_selected$survey_indicator <- 3
 res_selected$survey_time <- "December 2021"
@@ -184,7 +225,7 @@ unique(Qfeb_selected$law_obedience)
 
 
 Qapr_selected <- Qapr %>% 
-  select(Q1, Q4, Q5, Q2, Q21, Q12, Q17_1, Q17_2, Q18_1, Q18_2, Q18_3, Q11) %>%
+  select(Q1, Q4, Q5, Q2, Q21, Q12, Q17_1, Q17_2, Q18_1, Q18_2, Q18_3, Q11, Q16_1, Q16_2, Q16_3) %>%
   rename(age = Q1, gender = Q4, educaction = Q5, income = Q21, region = Q2, law_obedience = Q12,limit_websites = Q17_1, 
          protest_permition = Q18_1, arrest_participants = Q18_2,
          arrest_organizers = Q18_3, foreign_agent = Q17_2, putin_support = Q11) %>% 
@@ -194,7 +235,25 @@ Qapr_selected <- Qapr %>%
     law_obedience == "Отказ от ответа " ~ "no_answer",
     law_obedience == "Подчиняться закону во всех случаях, без исключений " ~ "always_abide",
     TRUE ~ law_obedience 
-  ))
+  ),
+  get_elected = case_when(Q16_1 == "Полностью соблюдаются" ~ "fully guaranteed",
+                          Q16_1 == "Скорее соблюдаются" ~ "partially guaranteed",
+                          Q16_1 == "Скорее не соблюдаются" ~ "partially violated",
+                          Q16_1 == "Полностью не соблюдаются" ~ "fully violated",
+                          Q16_1 == "Затрудняюсь ответить" ~ NA_character_,
+                          Q16_1 == "Отказ от ответа" ~ NA_character_),
+  free_assembly = case_when(Q16_2 == "Полностью соблюдаются" ~ "fully guaranteed",
+                            Q16_2 == "Скорее соблюдаются" ~ "partially guaranteed",
+                            Q16_2 == "Скорее не соблюдаются" ~ "partially violated",
+                            Q16_2 == "Полностью не соблюдаются" ~ "fully violated",
+                            Q16_2 == "Затрудняюсь ответить" ~ NA_character_,
+                            Q16_2 == "Отказ от ответа" ~ NA_character_),
+  free_speech = case_when(Q16_3 == "Полностью соблюдаются" ~ "fully guaranteed",
+                          Q16_3 == "Скорее соблюдаются" ~ "partially guaranteed",
+                          Q16_3 == "Скорее не соблюдаются" ~ "partially violated",
+                          Q16_3 == "Полностью не соблюдаются" ~ "fully violated",
+                          Q16_3 == "Затрудняюсь ответить" ~ NA_character_,
+                          Q16_3 == "Отказ от ответа" ~ NA_character_))
 
 Qapr_selected$survey_indicator <- 6
 Qapr_selected$survey_time <- "April 2024"
@@ -218,7 +277,25 @@ QJuly_selected <- QJuly %>%
     law_obedience == "Отказ от ответа" ~ "no_answer",
     law_obedience == "Подчиняться закону во всех случаях, без исключений" ~ "always_abide",
     TRUE ~ law_obedience  # Retain original value if it doesn't match any of the conditions
-  ))
+  ),
+  get_elected = case_when(Q14_1 == "Полностью соблюдаются" ~ "fully guaranteed",
+                          Q14_1 == "Скорее соблюдаются" ~ "partially guaranteed",
+                          Q14_1 == "Скорее не соблюдаются" ~ "partially violated",
+                          Q14_1 == "Полностью не соблюдаются" ~ "fully violated",
+                          Q14_1 == "Затрудняюсь ответить" ~ NA_character_,
+                          Q14_1 == "Отказ от ответа" ~ NA_character_),
+  free_assembly = case_when(Q14_2 == "Полностью соблюдаются" ~ "fully guaranteed",
+                            Q14_2 == "Скорее соблюдаются" ~ "partially guaranteed",
+                            Q14_2 == "Скорее не соблюдаются" ~ "partially violated",
+                            Q14_2 == "Полностью не соблюдаются" ~ "fully violated",
+                            Q14_2 == "Затрудняюсь ответить" ~ NA_character_,
+                            Q14_2 == "Отказ от ответа" ~ NA_character_),
+  free_speech = case_when(Q14_3 == "Полностью соблюдаются" ~ "fully guaranteed",
+                          Q14_3 == "Скорее соблюдаются" ~ "partially guaranteed",
+                          Q14_3 == "Скорее не соблюдаются" ~ "partially violated",
+                          Q14_3 == "Полностью не соблюдаются" ~ "fully violated",
+                          Q14_3 == "Затрудняюсь ответить" ~ NA_character_,
+                          Q14_3 == "Отказ от ответа" ~ NA_character_))
 
 QJuly_selected$survey_time <- "July 2024"
 
@@ -693,8 +770,135 @@ QJuly_selected <- datasets[[6]]
 res_selected <- datasets[[7]]
 Q_sept_selected <- datasets[[8]]
 
+# res_selected, Qapr_selected, QJuly_selected, Q_sept_selected
 
-# law obedience
+
+#### freedoms ####
+# na shares 
+data_freedoms <- bind_rows(
+  res_selected %>% select(survey_time, putin_support, get_elected, free_assembly, free_speech),
+  Qapr_selected %>% select(survey_time, putin_support, get_elected, free_assembly, free_speech),
+  QJuly_selected %>% select(survey_time, putin_support, get_elected, free_assembly, free_speech),
+  Q_sept_selected %>% select(survey_time, putin_support, get_elected, free_assembly, free_speech)
+  ) %>%
+    mutate(get_elected = replace_na(get_elected, "no_answer"),
+           free_assembly = replace_na(free_assembly, "no_answer"),
+           free_speech = replace_na(free_speech, "no_answer"),
+           putin_support = case_when(
+             putin_support == 1 ~ "approve",
+             putin_support == 2 ~ "disapprove",
+             putin_support == "Одобряю" ~ "approve",
+             putin_support == "Не одобряю" ~ "disapprove",
+             putin_support == "Одобряю  " ~ "approve",
+             putin_support == "Не одобряю  " ~ "disapprove",
+             T ~ NA
+           )) %>% 
+  mutate(putin_support = replace_na(putin_support, "no_answer"),
+         survey_time = factor(survey_time, levels = c("July 2020", "September 2020", "December 2021",
+                                                      "August 2023", "February 2024", "April 2024", "July 2024",
+                                                      "September 2024")))
+
+na_shares = data_freedoms %>%
+  group_by(survey_time) %>%
+  summarize(
+    no_answer_get_elected = mean(get_elected == "no_answer", na.rm = TRUE) * 100,
+    no_answer_free_assembly = mean(free_assembly == "no_answer", na.rm = TRUE) * 100,
+    no_answer_free_speech = mean(free_speech == "no_answer", na.rm = TRUE) * 100,
+    na_putin_support = mean(putin_support == "no_answer", na.rm = TRUE) * 100
+  )
+
+na_freedoms = ggplot(na_shares, aes(x = survey_time)) +
+  geom_line(aes(y = no_answer_get_elected, color = "No Answer - Get Elected", group = 1), size = 1) +
+  geom_line(aes(y = na_putin_support, color = "NA - Putin Support", group = 2), size = 1) +
+  geom_point(aes(y = no_answer_get_elected, color = "No Answer - Get Elected"), size = 3) +
+  geom_point(aes(y = na_putin_support, color = "NA - Putin Support"), size = 3) +
+  geom_line(aes(y = no_answer_free_assembly, color = "No Answer - Free Assembly", group = 1), size = 1) +
+  geom_line(aes(y = no_answer_free_speech, color = "No Answer - Free Speech", group = 1), size = 1) +
+  geom_point(aes(y = no_answer_free_assembly, color = "No Answer - Free Assembly"), size = 3) +
+  geom_point(aes(y = no_answer_free_speech, color = "No Answer - Free Speech"), size = 3) +
+  
+  labs(
+    title = "Shares of 'No Answer' for Freedoms Questions and NA for Putin Support Across Survey Times",
+    x = "Survey Time",
+    y = "Percentage",
+    color = "Response Type"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/share_na_freedoms.png", plot = na_freedoms, width = 10, height = 6, dpi = 300)
+
+
+
+# Calculate the shares
+plot_freedoms_data <- data_freedoms %>%
+  group_by(survey_time, putin_support) %>%
+  mutate(
+    get_elected_bin = case_when(get_elected == "fully guaranteed" |
+                                  get_elected == "partially guaranteed" ~ "guaranteed",
+                                TRUE ~ "not_guaranteed"),
+    free_assembly_bin = case_when(free_assembly == "fully guaranteed" |
+                                    free_assembly == "partially guaranteed" ~ "guaranteed",
+                                  TRUE ~ "not_guaranteed"),
+    free_speech_bin = case_when(free_speech == "fully guaranteed" |
+                                  free_speech == "partially guaranteed" ~ "guaranteed",
+                                TRUE ~ "not_guaranteed")
+  ) %>%
+  summarize(
+    share_elected = mean(get_elected_bin == "guaranteed", na.rm = TRUE),
+    share_assembly = mean(free_assembly_bin == "guaranteed", na.rm = TRUE),
+    share_speech = mean(free_speech_bin == "guaranteed", na.rm = TRUE),
+    total = n()
+  )
+
+# Plot share of people who say the right to get elected is guaranteed
+plot_shares_elected <- ggplot(plot_freedoms_data, aes(x = survey_time, y = share_elected, color = putin_support, group = putin_support)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Share of People Who Say Right to Get Elected is (Partially) Guaranteed",
+    x = "Survey Time",
+    y = "Share of Respondents",
+    color = "Putin's Approval"
+  ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  theme_minimal()
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/share_get_elected.png", plot = plot_shares_elected, width = 10, height = 6, dpi = 300)
+
+
+
+# Plot share of people who say the right to free assembly is guaranteed
+plot_shares_assembly <- ggplot(plot_freedoms_data, aes(x = survey_time, y = share_assembly, color = putin_support, group = putin_support)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Share of People Who Say Right to Free Assembly is (Partially) Guaranteed",
+    x = "Survey Time",
+    y = "Share of Respondents",
+    color = "Putin's Approval"
+  ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  theme_minimal()
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/share_free_assembly.png", plot = plot_shares_assembly, width = 10, height = 6, dpi = 300)
+
+
+# Plot share of people who say the right to free speech is guaranteed
+plot_shares_speech <- ggplot(plot_freedoms_data, aes(x = survey_time, y = share_speech, color = putin_support, group = putin_support)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Share of People Who Say Right to Free Speech is (Partially) Guaranteed",
+    x = "Survey Time",
+    y = "Share of Respondents",
+    color = "Putin's Approval"
+  ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  theme_minimal()
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/surveys/share_free_speech.png", plot = plot_shares_speech, width = 10, height = 6, dpi = 300)
+
+
+
+#### law obedience ####
 data_law_obedience <- bind_rows(
   Q_sept_selected,
   Qaug_selected %>% select(survey_time, putin_support, law_obedience),
