@@ -1,0 +1,125 @@
+---
+title: "2021 Experiment"
+author: "Maksim Zubok"
+date: "2024-11-25"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      results = 'asis')
+
+Sys.getlocale()
+# Set this to a locale that supports Cyrillic, for example, on Windows
+Sys.setlocale("LC_ALL", "Russian")
+
+##### Set Up #####
+pacman::p_load(tidyverse, readr, broom, 
+               lubridate, gt, gtsummary, survey, readxl,
+               gridExtra, knitr, haven, nnet, stargazer, kableExtra, gplots,
+               mice, xtable)
+```
+
+
+```{r}
+data <- read_sav("21cur.sav")
+
+data = data %>% 
+  mutate(
+    authorisation = case_when(
+      qVAR1 %in% c(1,2,3,4) ~ "authorised",
+      qVAR1 %in% c(5,6,7,8) ~ "not_authorised"
+    ),
+    legal_prompt = case_when(
+      qVAR1 %in% c(1,3,5,7) ~ "prompted",
+      qVAR1 %in% c(2,4,6,8) ~ "not_prompted"
+    ),
+    is_peaceful = case_when(
+      qVAR1 %in% c(1,2,5,6) ~ "peaceful",
+      qVAR1 %in% c(3,4,7,8) ~ "not_peaceful"
+    ),
+    outcome_bin = case_when(
+      qQ1 %in% c(1,2) ~ 1,
+      qQ1 %in% c(3,4) ~ 0,
+      T ~ NA_real_),
+    outcome_bin_na_disaprove= case_when(
+      qQ1 %in% c(1,2) ~ 1,
+      T ~ 0),
+    blame_admin = case_when(
+      qQ2 == 1 ~ 1,
+      T ~ 0
+    ),
+    blame_police = case_when(
+      qQ2 == 2 ~ 1,
+      T ~ 0
+    ),
+    blame_orgs = case_when(
+      qQ2 == 3 ~ 1,
+      T ~ 0
+    ),
+    blame_participants = case_when(
+      qQ2 == 4 ~ 1,
+      T ~ 0
+    ),
+    blame_all = case_when(
+      qQ2 == 5 ~ 1,
+      T ~ 0
+    )
+         )
+
+```
+
+
+```{r}
+m1 <- lm(outcome_bin ~ factor(authorisation)+factor(legal_prompt) + factor(is_peaceful), data = data)
+
+m2 <- lm(outcome_bin_na_disaprove ~ factor(authorisation)+factor(legal_prompt) + factor(is_peaceful), data = data)
+```
+
+The models use binary indicator as the main outcome for approval for protesters actions. Model one treats "refuse to answer" and "do not know" as NAs. Model 2 treats them as expressions of disapproval. No imputation was performed. 
+
+```{r}
+stargazer(m1, m2,
+          header=FALSE,
+          title="Linear Prob. Models for Approval of Protesters' Actions",
+          digits=2,
+          no.space = TRUE
+)
+```
+
+\newpage
+
+## Who is to blame?
+
+To analyse the next set of outcomes, I created five binary variables capturing each category to blame vs all others.
+
+```{r}
+m_admin = lm(blame_admin ~ factor(authorisation)+factor(legal_prompt) + factor(is_peaceful), data = data)
+
+m_police = lm(blame_police ~ factor(authorisation)+factor(legal_prompt) + factor(is_peaceful), data = data)
+
+m_orgs = lm(blame_orgs ~ factor(authorisation)+factor(legal_prompt) + factor(is_peaceful), data = data)
+
+m_parts = lm(blame_participants ~ factor(authorisation)+factor(legal_prompt) + factor(is_peaceful), data = data)
+
+m_all = lm(blame_all ~ factor(authorisation)+factor(legal_prompt) + factor(is_peaceful), data = data)
+```
+
+```{r}
+models = list(m_admin, m_police, m_orgs, m_parts, m_all)
+
+stargazer(models,
+          header=FALSE,
+          title="Linear Prob. Models for Who is to Blame",
+          digits=2,
+          dep.var.labels = c("Admin",
+                             "Police",
+                             "Orgs",
+                             "Participants",
+                             "All"),
+          no.space = TRUE
+)
+```
+
