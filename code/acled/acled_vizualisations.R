@@ -23,9 +23,10 @@ acled <- import("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processe
 # write.xlsx(acled_subset, "acled_preprocessed_jul21_dec22.xlsx", rowNames = FALSE)
 
 acled_subset_for_plot <- acled %>% 
-  filter(date >= '2021-01-01')%>%
+  #filter(date >= '2021-01-01')%>%
   filter(pro_kremlin_indicator != 1) %>%
-  mutate(week = ceiling_date(date, unit = "week")) 
+  mutate(week = ceiling_date(date, unit = "week"),
+         month = ceiling_date(date, unit = "month")) 
 
 #### 1. Time-series line plot of the monthly number of unique protests in Russia ####
 
@@ -33,36 +34,58 @@ acled_subset_for_plot <- acled %>%
 unique_counts <- acled_subset_for_plot %>%
   filter(pro_kremlin_indicator != 1) %>%
   mutate(week = ceiling_date(date, unit = "week")) %>%
-  group_by(week) %>%
+  group_by(month) %>%
   summarise(unique_notes = n_distinct(notes))
 
 # Create the plot
-weekly_n_plot <- ggplot(unique_counts, aes(x = week, y = unique_notes)) +
-  geom_line() +
-  geom_point() +
+weekly_n_plot <- ggplot(unique_counts, aes(x = month, y = unique_notes)) +
+  geom_line(stat = "smooth", method = "loess", span = 0.1) +
+  # geom_point(size = 0.3) +
   scale_x_date(
-    date_minor_breaks = "1 week",
-    date_breaks = "1 month",
-    labels = function(x) format(x, "%B")
+    date_minor_breaks = "1 month",
+    date_breaks = "1 year",
+    labels = function(x) format(x, "%Y")
   ) +
-  labs(title = "Weekly Number of Unique Protests in Russia",
-       x = "",
-       y = "Number of Unique Protests") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_vline(xintercept = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")), linetype = "dashed", color = "blue") +  # Add blue vertical lines at the start of 2021, 2022, and 2023
-  annotate(geom = "text", x = as.Date(c("2021-01-01", "2022-01-01", "2023-01-01")),
-           y = 160, label = c("2021", "2022", "2023"), vjust = 1, hjust = 0,
-           color = "blue", angle = 90, size = 3) + 
-  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "red") +
-  annotate(geom = "text", x = as.Date("2022-02-24"), y = 160, label = "Invasion", vjust = 1, hjust = 0, color = "red", angle = 90, size = 3) +
-  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgreen") +
-  annotate(geom = "text", x = as.Date("2022-09-21"), y = 160, label = "Mobilisation", vjust = 1, hjust = 0, color = "darkgreen", angle = 90, size = 3)
-
+  scale_y_continuous(limits = c(0, NA)) + # Set y-axis to start at 0
+  labs(
+    title = "",
+    x = "",
+    y = "Protest Event Count"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.border = element_rect(color = "black", fill = NA, size = 0.5) # Add border
+  ) +
+  geom_vline(xintercept = as.Date("2022-02-24"), linetype = "solid", color = "darkgrey") +
+  annotate(
+    geom = "text",
+    x = as.Date("2022-02-24"),
+    y = 160,
+    label = "Invasion",
+    vjust = 1,
+    hjust = 0,
+    color = "black",
+    angle = 90,
+    size = 3
+  ) +
+  geom_vline(xintercept = as.Date("2022-09-21"), linetype = "solid", color = "darkgrey") +
+  annotate(
+    geom = "text",
+    x = as.Date("2022-09-21"),
+    y = 160,
+    label = "Mobilisation",
+    vjust = 1,
+    hjust = 0,
+    color = "black",
+    angle = 90,
+    size = 3
+  )
 
 weekly_n_plot
 
-ggsave("outputs/weekly_unique_protests_plot.png", plot = weekly_n_plot, width = 10, height = 6, dpi = 300)
+
+ggsave("outputs/monthly_unique_protests_plot.png", plot = weekly_n_plot, width = 10, height = 6, dpi = 300)
 
 # daily_counts <- acled_subset_for_plot %>%
 #   filter(pro_kremlin_indicator != 1) %>%
