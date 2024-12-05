@@ -86,7 +86,7 @@ robust_se_values <- robust_results[, 2]  # Robust standard errors
 
 stargazer(
   model,
-  type = "text",
+  # type = "text",
   se = list(robust_se_values), # Replace standard errors with robust SEs
   omit = c("factor\\(reg_code\\)", "factor\\(year\\)"), # Omit factor variables
   omit.labels = c("Region Code", "Year"),              # Optional: Custom labels for omitted variables
@@ -108,7 +108,7 @@ model2 <- lm(missing_org ~ factor(year) + factor(reg_code) + factor(topics_recod
 
 stargazer(
   model2,
-  type = "text",
+  #type = "text",
   omit = c("factor\\(reg_code\\)", "factor\\(year\\)"), # Omit factor variables
   omit.labels = c("Region Code", "Year"),              # Optional: Custom labels for omitted variables
   keep.stat = c("n", "rsq", "adj.rsq")                # Show sample size, R², adjusted R²
@@ -159,7 +159,7 @@ robust_se_values <- robust_results[, 2]  # Robust standard errors
 
 stargazer(
   model_psa1,
-  type = "text",
+  #type = "text",
   se = list(robust_se_values), # Replace standard errors with robust SEs
   omit = c("factor\\(reg_code\\)"), # Omit factor variables
   omit.labels = c("Region Code"),              # Optional: Custom labels for omitted variables
@@ -181,7 +181,7 @@ robust_se_values <- robust_results[, 2]  # Robust standard errors
 
 stargazer(
   model_psa2,
-  type = "text",
+  #type = "text",
   se = list(robust_se_values), # Replace standard errors with robust SEs
   omit = c("factor\\(reg_code\\)"), # Omit factor variables
   omit.labels = c("Region Code"),              # Optional: Custom labels for omitted variables
@@ -203,7 +203,7 @@ robust_se_values <- robust_results[, 2]  # Robust standard errors
 
 stargazer(
   model_psa3,
-  type = "text",
+  #type = "text",
   se = list(robust_se_values), # Replace standard errors with robust SEs
   omit = c("factor\\(reg_code\\)"), # Omit factor variables
   omit.labels = c("Region Code"),              # Optional: Custom labels for omitted variables
@@ -224,7 +224,7 @@ robust_se_values <- robust_results[, 2]  # Robust standard errors
 
 stargazer(
   model_psa4,
-  type = "text",
+  #type = "text",
   se = list(robust_se_values), # Replace standard errors with robust SEs
   omit = c("factor\\(reg_code\\)"), # Omit factor variables
   omit.labels = c("Region Code"),              # Optional: Custom labels for omitted variables
@@ -253,7 +253,7 @@ robust_se_values <- robust_results[, 2]  # Robust standard errors
 
 stargazer(
   model_psa5,
-  type = "text",
+  #type = "text",
   se = list(robust_se_values), # Replace standard errors with robust SEs
   omit = c("factor\\(reg_code\\)"), # Omit factor variables
   omit.labels = c("Region Code"),              # Optional: Custom labels for omitted variables
