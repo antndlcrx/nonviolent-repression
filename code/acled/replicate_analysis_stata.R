@@ -1,5 +1,6 @@
 pacman::p_load(tidyverse, rio, ggplot2,
-               sandwich, lmtest, lubridate, stargazer)
+               sandwich, lmtest, lubridate, margins, stargazer,
+               sjPlot, interplot)
 
 
 data <- read_csv("C:/Users/murrn/GitHub/nonviolent-repression/data/acled_processed_data/acled_with_dvs_and_controls_16_07_2024_utf8byte.csv")
@@ -97,6 +98,22 @@ stargazer(
 
 
 
+plot1 = plot_model(model, type = "pred", terms = c("topics_recoded", "post_invasion"),
+           vcov.fun = robust_se)+
+  scale_color_manual(values = c("royalblue", "tomato"),
+                     labels = c("Before Invasion", "After Invasion"),
+                     name = "") + 
+  xlab("Protest Type") + 
+  ylab("Probability of a Protest facing Police Violence") + 
+  scale_x_continuous(
+                     labels = c("Political", "Cultural & Legal",
+                                "Environmental", "Social & Economic")) + 
+  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + ggtitle(NULL)
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/protest_type_post_inv.png",
+       plot = plot1, width = 10, height = 6, dpi = 300)
+
+
 #### misssing orgs ####
 
 data = data %>% 
@@ -119,7 +136,6 @@ stargazer(
 
 
 #### Analysis for PSA ####
-
 data <- data %>%
   mutate(
     time_indicator = case_when(
@@ -147,7 +163,7 @@ data <- data %>%
 
 filtered_data <- data %>% filter(pro_kremlin_indicator == 0)
 
-model_psa1 <- lm(police_violence ~ pol_expand * factor(year) + auth_rec + org_c1 + 
+model_psa1 <- lm(police_violence ~ factor(pol_expand) * factor(year) + auth_rec + org_c1 + 
               election_month + pro_kremlin_indicator + factor(reg_code), data = filtered_data)
 
 # Calculate robust standard errors
@@ -168,8 +184,22 @@ stargazer(
   #covariate.labels = c("Topics * Post-Invasion", "Auth Rec", "Org C1", "Election Month") # Rename predictors
 )
 
+
+## plot
+plot2 = plot_model(model_psa1, type = "pred", terms = c("pol_expand",
+                                                "year"),
+           vcov.fun = robust_se) + theme_bw()+
+  scale_x_continuous(breaks = c(0, 1),
+                     labels = c("Political (war anti and war pro)",
+                                "Other")) + 
+  xlab("")+
+  ylab("Probability of a Protest facing Police Violence")+ ggtitle(NULL)
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/polit_protest_years.png",
+       plot = plot2, width = 10, height = 6, dpi = 300)
+
 ## check if robust to alternative ##
-model_psa2 <- lm(police_violence ~ pol_expand2 * factor(year) + auth_rec + org_c1 + 
+model_psa2 <- lm(police_violence ~ factor(pol_expand2) * factor(year) + auth_rec + org_c1 + 
                    election_month + pro_kremlin_indicator + factor(reg_code), data = filtered_data)
 
 # Calculate robust standard errors
@@ -189,6 +219,18 @@ stargazer(
   dep.var.labels = "Police Violence"
   #covariate.labels = c("Topics * Post-Invasion", "Auth Rec", "Org C1", "Election Month") # Rename predictors
 )
+
+plot3 = plot_model(model_psa2, type = "pred", terms = c("pol_expand2",
+                                                "year"),
+           vcov.fun = robust_se) + theme_bw()+
+  scale_x_continuous(breaks = c(0, 1),
+                     labels = c("Political (war anti)",
+                                "Other")) + 
+  xlab("")+
+  ylab("Probability of a Protest facing Police Violence") + ggtitle(NULL)
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/polit_protest_years_no_pro_war.png",
+       plot = plot3, width = 10, height = 6, dpi = 300)
 
 
 ## extensions with smaller windows/pre/post invasion & law ##
@@ -233,6 +275,21 @@ stargazer(
   #covariate.labels = c("Topics * Post-Invasion", "Auth Rec", "Org C1", "Election Month") # Rename predictors
 )
 
+plot4 = plot_model(model_psa4, type = "pred", terms = c("time_indicator",
+                                                "pol_expand"),
+           vcov.fun = robust_se) + theme_bw()+
+  xlab("")+
+  ylab("Probability of a Protest facing Police Violence")+
+  scale_color_manual(values = c("royalblue", "tomato"),
+                     labels = c("Other", "Political"),
+                     name = "")+
+  scale_x_continuous(breaks = c(0, 1, 2),
+                     labels = c("before Feb 23", "Feb 24 to March 3", "March 4 to March 20"))+
+  ggtitle(NULL)
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/polit_protest_first_war_weeks.png",
+       plot = plot4, width = 10, height = 6, dpi = 300)
+
 
 filtered_data <- filtered_data %>%
   mutate(
@@ -261,3 +318,14 @@ stargazer(
   dep.var.labels = "Police Violence"
   #covariate.labels = c("Topics * Post-Invasion", "Auth Rec", "Org C1", "Election Month") # Rename predictors
 )
+
+plot5 = plot_model(model_psa5, type = "pred", terms = c("mycnt",
+                                                "pol_expand"),
+           vcov.fun = robust_se) + theme_bw()+
+  scale_color_manual(values = c("royalblue", "tomato"),
+                     labels=c("Other", "Political"), name="")+
+  xlab("Weeks (Numeric)")+
+  ylab("Probability of a Protest facing Police Violence")+ ggtitle(NULL)
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/polit_protest_weeks_num.png",
+       plot = plot5, width = 10, height = 6, dpi = 300)
