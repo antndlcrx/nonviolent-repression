@@ -164,6 +164,8 @@ data <- data %>%
 filtered_data <- data %>% filter(pro_kremlin_indicator == 0)
 data_no_moscow <- filtered_data %>% filter(federal_subject != "The City of Moscow")
 
+
+#### main model ####
 model_psa1 <- lm(police_violence ~ factor(pol_expand) * factor(year) + auth_rec + org_c1 + 
               election_month + factor(reg_code), data = filtered_data)
 
@@ -205,7 +207,7 @@ ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/polit_protest_
 ggpredict(model_psa1, terms = c("year", "pol_expand"))
 
 
-## logit for robustness ## 
+#### logit (mian model) for robustness ####
 model_psa1_logit <- glm(police_violence ~ factor(pol_expand) * factor(year) + auth_rec + org_c1 + 
                     election_month + factor(reg_code), 
                   data = filtered_data, 
@@ -217,7 +219,7 @@ robust_results_logits <- coeftest(model_psa1_logit, vcov = robust_se_logit)  # C
 robust_coef_logits <- robust_results_logits[, 1]  # Coefficients
 robust_se_values_logits <- robust_results_logits[, 2]  # Robust standard errors
 
-## same model but no Moscow 
+#### main model but no Moscow ####
 model_psa1_no_moscow <- lm(police_violence ~ factor(pol_expand) * factor(year) + auth_rec + org_c1 + 
                    election_month + factor(reg_code), data = data_no_moscow)
 
@@ -228,11 +230,39 @@ robust_results_no_moscow <- coeftest(model_psa1_no_moscow, vcov = robust_se_no_m
 robust_coef_no_moscow <- robust_results_no_moscow[, 1]  # Coefficients
 robust_se_values_no_moscow <- robust_results_no_moscow[, 2]  # Robust standard errors
 
-stargazer(model_psa1,
+
+# plot moscow
+plot_m = plot_model(model_psa1_no_moscow, type = "pred", terms = c("year", "pol_expand"
+),
+vcov.fun = robust_se_values_no_moscow) + theme_bw()+
+  scale_color_manual(values = c("darkgrey", "black"),
+                     labels = c("Non-Political", "Political"),
+                     name = "")+
+  xlab("")+
+  ylab("Predicted Probability")+ ggtitle(NULL)
+
+ggsave("C:/Users/murrn/GitHub/nonviolent-repression/outputs/acled/plot_moscow.png",
+       plot = plot_m, width = 10, height = 6, dpi = 300)
+
+#### mian model different political specification (no pro-war) #####
+data_no_pro_war <- filtered_data %>% 
+  filter(pred_labels != "war_pro")
+  
+model_psa2 <- lm(police_violence ~ factor(pol_expand) * factor(year) + auth_rec + org_c1 + 
+                   election_month + factor(reg_code), data = data_no_pro_war)
+
+# Calculate robust standard errors
+robust_se_2 <- vcovHC(model_psa2, type = "HC1")
+# Extract coefficients and robust standard errors
+robust_results_2 <- coeftest(model_psa2, vcov = robust_se)
+robust_coef_2 <- robust_results_2[, 1]  # Coefficients
+robust_se_values_2 <- robust_results_2[, 2]  # Robust standard errors
+
+stargazer(model_psa2,
           model_psa1_logit,
           model_psa1_no_moscow,
           #type = "text",
-          se = list(robust_se_values, robust_se_values_logits, robust_se_values_no_moscow), # Replace standard errors with robust SEs
+          se = list(robust_se_values_2, robust_se_values_logits, robust_se_values_no_moscow), # Replace standard errors with robust SEs
           omit = c("factor\\(reg_code\\)"), # Omit factor variables
           omit.labels = c("Federal Region FE"),              # Optional: Custom labels for omitted variables
           keep.stat = c("n", "aic", "ll"),                   # For logistic models, show sample size, AIC, log-likelihood
@@ -242,29 +272,6 @@ stargazer(model_psa1,
                                "Political x 2020", "Political x 2021", "Political x 2022", "Political x 2023")
 )
 
-
-## check if robust to alternative ##
-model_psa2 <- lm(police_violence ~ factor(pol_expand2) * factor(year) + auth_rec + org_c1 + 
-                   election_month + factor(reg_code), data = filtered_data)
-
-# Calculate robust standard errors
-robust_se <- vcovHC(model_psa2, type = "HC1")
-# Extract coefficients and robust standard errors
-robust_results <- coeftest(model_psa2, vcov = robust_se)
-robust_coef <- robust_results[, 1]  # Coefficients
-robust_se_values <- robust_results[, 2]  # Robust standard errors
-
-stargazer(
-  model_psa2,
-  #type = "text",
-  se = list(robust_se_values), # Replace standard errors with robust SEs
-  omit = c("factor\\(reg_code\\)"), # Omit factor variables
-  omit.labels = c("Region Code"),              # Optional: Custom labels for omitted variables
-  keep.stat = c("n", "rsq", "adj.rsq"),                # Show sample size, R², adjusted R²
-  dep.var.labels = "Police Violence",
-  covariate.labels = c("Political Protest", "Year 2019", "Year 2020", "Year 2021","Year 2022","Year 2023",
-                       "Protest authorised", "Organizers", "Election Month", "Political x 2019", 
-                       "Political x 2020", "Political x 2021", "Political x 2022", "Political x 2023"))
 
 plot3 = plot_model(model_psa2, type = "pred", terms = c("pol_expand2",
                                                 "year"),
@@ -407,7 +414,7 @@ robust_se_values <- robust_results[, 2]  # Robust standard errors
 
 stargazer(
   model_psa6,
-  type = "text",
+  #type = "text",
   se = list(robust_se_values), # Replace standard errors with robust SEs
   omit = c("factor\\(reg_code\\)", "pol_expand:month", "month_year_"), # Omit factor variables
   omit.labels = c("Region Code", "Month Year", "Month Year x Political"),              # Optional: Custom labels for omitted variables
